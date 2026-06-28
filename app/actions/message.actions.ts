@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { messageSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
 import { logger } from "@/app/lib/logger";
+
+import type { ActionResult } from "@/app/lib/form-types";
 
 export async function getMessages() {
   try {
@@ -19,7 +20,7 @@ export async function getMessages() {
   }
 }
 
-export async function submitMessage(formData: FormData) {
+export async function submitMessage(formData: FormData): Promise<ActionResult> {
   try {
     const raw = Object.fromEntries(formData);
     const parsed = messageSchema.safeParse({
@@ -33,22 +34,30 @@ export async function submitMessage(formData: FormData) {
         action: "submitMessage",
         context: { errors: parsed.error.issues },
       });
-      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+      return {
+        success: false,
+        errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        message: "Validation failed",
+      };
     }
 
     await prisma.message.create({ data: parsed.data });
 
     revalidatePath("/admin/messages");
+    return { success: true, errors: null, message: "Message sent successfully" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("submitMessage", error);
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "submitMessage",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function markMessageRead(id: string) {
+export async function markMessageRead(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     await prisma.message.update({
       where: { id },
@@ -56,37 +65,32 @@ export async function markMessageRead(id: string) {
     });
 
     revalidatePath("/admin/messages");
+    return { success: true, errors: null, message: "Message marked as read" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("markMessageRead", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "markMessageRead",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function deleteMessage(id: string) {
+export async function deleteMessage(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     await prisma.message.delete({ where: { id } });
 
     revalidatePath("/admin/messages");
+    return { success: true, errors: null, message: "Message deleted" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("deleteMessage", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deleteMessage",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
-}
-
-async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
-
-  await logger.error(message, {
-    action,
-    userId: extra?.userId as string | undefined,
-    context: extra?.context,
-    stack,
-  });
-
-  if (error instanceof Error) throw error;
-  throw new Error("An unexpected error occurred");
 }

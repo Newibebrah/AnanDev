@@ -3,6 +3,7 @@ import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { getMessages, markMessageRead, deleteMessage } from "@/app/actions/message.actions";
 import { formatDate } from "@/app/lib/utils";
+import { InlineAction } from "@/app/components/admin/inline-action";
 
 export const dynamic = "force-dynamic";
 
@@ -46,17 +47,17 @@ export default async function AdminMessagesPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-1">
                       {!message.isRead && (
-                        <form action={markMessageRead.bind(null, message.id)}>
+                        <InlineAction action={markMessageRead.bind(null, message.id)}>
                           <Button type="submit" variant="ghost" size="sm">
                             Mark Read
                           </Button>
-                        </form>
+                        </InlineAction>
                       )}
-                      <form action={deleteMessage.bind(null, message.id)}>
+                      <InlineAction action={deleteMessage.bind(null, message.id)}>
                         <Button type="submit" variant="ghost" size="sm" className="text-destructive">
                           Delete
                         </Button>
-                      </form>
+                      </InlineAction>
                     </div>
                   </td>
                 </tr>

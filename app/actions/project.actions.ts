@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect, unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { projectSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
 import { logger } from "@/app/lib/logger";
 import { slugify } from "@/app/lib/utils";
+
+import type { ActionResult } from "@/app/lib/form-types";
 
 export async function getProjects() {
   try {
@@ -60,10 +61,12 @@ export async function getProjectById(id: string) {
   }
 }
 
-export async function createProject(formData: FormData) {
+export async function createProject(formData: FormData): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) {
+      return { success: false, errors: null, message: "Unauthorized" };
+    }
 
     const raw = Object.fromEntries(formData);
 
@@ -91,7 +94,11 @@ export async function createProject(formData: FormData) {
         userId: session.user.id as string,
         context: { errors: parsed.error.issues, raw: { title, slug } },
       });
-      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+      return {
+        success: false,
+        errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        message: "Validation failed",
+      };
     }
 
     await prisma.project.create({
@@ -100,17 +107,22 @@ export async function createProject(formData: FormData) {
 
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
-    redirect("/admin/projects");
+    return { success: true, errors: null, message: "Project created successfully" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("createProject", error, { userId: (await auth())?.user?.id });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "createProject",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function updateProject(id: string, formData: FormData) {
+export async function updateProject(id: string, formData: FormData): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) {
+      return { success: false, errors: null, message: "Unauthorized" };
+    }
 
     const raw = Object.fromEntries(formData);
 
@@ -118,9 +130,9 @@ export async function updateProject(id: string, formData: FormData) {
     try {
       existing = await prisma.project.findUnique({ where: { id } });
     } catch {
-      throw new Error("Failed to find project for update");
+      return { success: false, errors: null, message: "Failed to find project for update" };
     }
-    if (!existing) throw new Error("Not found");
+    if (!existing) return { success: false, errors: null, message: "Not found" };
 
     const title = (raw.title as string) || "";
     const slug = (raw.slug as string)?.trim() || existing.slug;
@@ -146,7 +158,11 @@ export async function updateProject(id: string, formData: FormData) {
         userId: session.user.id as string,
         context: { id, errors: parsed.error.issues, raw: { title, slug } },
       });
-      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+      return {
+        success: false,
+        errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        message: "Validation failed",
+      };
     }
 
     await prisma.project.update({
@@ -156,39 +172,48 @@ export async function updateProject(id: string, formData: FormData) {
 
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
-    redirect("/admin/projects");
+    return { success: true, errors: null, message: "Project updated successfully" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("updateProject", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "updateProject",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function deleteProject(id: string) {
+export async function deleteProject(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     try {
       await prisma.project.delete({ where: { id } });
     } catch {
-      throw new Error("Failed to delete project");
+      return { success: false, errors: null, message: "Failed to delete project" };
     }
 
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
+    return { success: true, errors: null, message: "Project deleted" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("deleteProject", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deleteProject",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function toggleProjectFeatured(id: string) {
+export async function toggleProjectFeatured(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     const project = await prisma.project.findUnique({ where: { id } });
-    if (!project) throw new Error("Not found");
+    if (!project) return { success: false, errors: null, message: "Not found" };
 
     await prisma.project.update({
       where: { id },
@@ -197,9 +222,14 @@ export async function toggleProjectFeatured(id: string) {
 
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
+    return { success: true, errors: null, message: "Project updated" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("toggleProjectFeatured", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "toggleProjectFeatured",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
@@ -212,19 +242,4 @@ function safeParseJsonArray(value: string): string[] {
   } catch {
     return value.split(",").map((s) => s.trim()).filter(Boolean);
   }
-}
-
-async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
-
-  await logger.error(message, {
-    action,
-    userId: extra?.userId as string | undefined,
-    context: extra?.context,
-    stack,
-  });
-
-  if (error instanceof Error) throw error;
-  throw new Error("An unexpected error occurred");
 }

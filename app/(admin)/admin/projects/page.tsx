@@ -4,6 +4,7 @@ import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { getProjects, deleteProject, toggleProjectFeatured } from "@/app/actions/project.actions";
 import { formatDate } from "@/app/lib/utils";
+import { InlineAction } from "@/app/components/admin/inline-action";
 
 export const dynamic = "force-dynamic";
 
@@ -45,19 +46,19 @@ export default async function AdminProjectsPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <form action={toggleProjectFeatured.bind(null, project.id)}>
+                      <InlineAction action={toggleProjectFeatured.bind(null, project.id)}>
                         <Button type="submit" variant="ghost" size="sm">
                           {project.isFeatured ? "Unfeature" : "Feature"}
                         </Button>
-                      </form>
+                      </InlineAction>
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={`/admin/projects/${project.id}`}>Edit</Link>
                       </Button>
-                      <form action={deleteProject.bind(null, project.id)}>
+                      <InlineAction action={deleteProject.bind(null, project.id)}>
                         <Button type="submit" variant="ghost" size="sm" className="text-destructive">
                           Delete
                         </Button>
-                      </form>
+                      </InlineAction>
                     </div>
                   </td>
                 </tr>

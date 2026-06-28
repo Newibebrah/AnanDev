@@ -3,6 +3,7 @@ import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { getComments, approveComment, rejectComment, deleteComment } from "@/app/actions/comment.actions";
 import { formatDate } from "@/app/lib/utils";
+import { InlineAction } from "@/app/components/admin/inline-action";
 
 export const dynamic = "force-dynamic";
 
@@ -52,24 +53,24 @@ export default async function AdminCommentsPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-1">
                       {!comment.isApproved && (
-                        <form action={approveComment.bind(null, comment.id)}>
+                        <InlineAction action={approveComment.bind(null, comment.id)}>
                           <Button type="submit" variant="ghost" size="sm">
                             Approve
                           </Button>
-                        </form>
+                        </InlineAction>
                       )}
                       {comment.isApproved && (
-                        <form action={rejectComment.bind(null, comment.id)}>
+                        <InlineAction action={rejectComment.bind(null, comment.id)}>
                           <Button type="submit" variant="ghost" size="sm">
                             Reject
                           </Button>
-                        </form>
+                        </InlineAction>
                       )}
-                      <form action={deleteComment.bind(null, comment.id)}>
+                      <InlineAction action={deleteComment.bind(null, comment.id)}>
                         <Button type="submit" variant="ghost" size="sm" className="text-destructive">
                           Delete
                         </Button>
-                      </form>
+                      </InlineAction>
                     </div>
                   </td>
                 </tr>

@@ -4,6 +4,7 @@ import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { getPosts, deletePost, togglePostStatus } from "@/app/actions/post.actions";
 import { formatDate } from "@/app/lib/utils";
+import { InlineAction } from "@/app/components/admin/inline-action";
 
 export const dynamic = "force-dynamic";
 
@@ -47,19 +48,19 @@ export default async function AdminBlogPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <form action={togglePostStatus.bind(null, post.id)}>
+                      <InlineAction action={togglePostStatus.bind(null, post.id)}>
                         <Button type="submit" variant="ghost" size="sm">
                           {post.status === "PUBLISHED" ? "Draft" : "Publish"}
                         </Button>
-                      </form>
+                      </InlineAction>
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={`/admin/blog/${post.id}`}>Edit</Link>
                       </Button>
-                      <form action={deletePost.bind(null, post.id)}>
+                      <InlineAction action={deletePost.bind(null, post.id)}>
                         <Button type="submit" variant="ghost" size="sm" className="text-destructive">
                           Delete
                         </Button>
-                      </form>
+                      </InlineAction>
                     </div>
                   </td>
                 </tr>

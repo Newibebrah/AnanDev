@@ -1,19 +1,33 @@
 "use client";
 
+import { useActionState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Label } from "@/app/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { submitMessage } from "@/app/actions/message.actions";
+import { validateMessage } from "@/app/lib/client-validate";
+import type { ActionResult } from "@/app/lib/form-types";
 import { toast } from "sonner";
 
 export default function HireMePage() {
-  async function handleSubmit(formData: FormData) {
-    await submitMessage(formData);
-    toast.success("Message sent! I'll get back to you soon.");
-    (document.getElementById("contact-form") as HTMLFormElement)?.reset();
-  }
+  const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
+    async (_prev, formData) => {
+      const clientErrors = validateMessage(formData);
+      if (clientErrors) return clientErrors;
+      return submitMessage(formData);
+    },
+    null
+  );
+
+  useEffect(() => {
+    if (state?.success) {
+      toast.success(state.message);
+    } else if (state && !state.success && state.message) {
+      toast.error(state.message);
+    }
+  }, [state]);
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-12">
@@ -80,7 +94,7 @@ export default function HireMePage() {
           <CardTitle className="text-lg">Send a Message</CardTitle>
         </CardHeader>
         <CardContent>
-          <form id="contact-form" action={handleSubmit} className="space-y-4">
+          <form action={formAction} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="name">Name</Label>
@@ -95,7 +109,9 @@ export default function HireMePage() {
               <Label htmlFor="content">Message</Label>
               <Textarea id="content" name="content" placeholder="Tell me about your project..." required rows={6} />
             </div>
-            <Button type="submit">Send Message</Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Sending..." : "Send Message"}
+            </Button>
           </form>
         </CardContent>
       </Card>

@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect, unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { postSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
 import { logger } from "@/app/lib/logger";
 import { slugify } from "@/app/lib/utils";
+
+import type { ActionResult } from "@/app/lib/form-types";
 
 export async function getPosts() {
   try {
@@ -79,10 +80,10 @@ export async function getPostById(id: string) {
   }
 }
 
-export async function createPost(formData: FormData) {
+export async function createPost(formData: FormData): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     const raw = Object.fromEntries(formData);
     const published = raw.status === "PUBLISHED" || raw.status === "on";
@@ -106,7 +107,11 @@ export async function createPost(formData: FormData) {
         userId: session.user.id as string,
         context: { errors: parsed.error.issues, raw: { title, slug } },
       });
-      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+      return {
+        success: false,
+        errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        message: "Validation failed",
+      };
     }
 
     const authorId = session.user.id as string;
@@ -121,23 +126,26 @@ export async function createPost(formData: FormData) {
 
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
-    redirect("/admin/blog");
+    return { success: true, errors: null, message: "Post created successfully" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("createPost", error, { userId: (await auth())?.user?.id });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "createPost",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function updatePost(id: string, formData: FormData) {
+export async function updatePost(id: string, formData: FormData): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     const raw = Object.fromEntries(formData);
     const published = raw.status === "PUBLISHED" || raw.status === "on";
 
     const existing = await prisma.post.findUnique({ where: { id } });
-    if (!existing) throw new Error("Not found");
+    if (!existing) return { success: false, errors: null, message: "Not found" };
 
     const title = (raw.title as string) || "";
     const slug = (raw.slug as string)?.trim() || existing.slug;
@@ -161,7 +169,11 @@ export async function updatePost(id: string, formData: FormData) {
         userId: session.user.id as string,
         context: { id, errors: parsed.error.issues, raw: { title, slug } },
       });
-      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+      return {
+        success: false,
+        errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        message: "Validation failed",
+      };
     }
 
     await prisma.post.update({
@@ -174,35 +186,44 @@ export async function updatePost(id: string, formData: FormData) {
 
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
-    redirect("/admin/blog");
+    return { success: true, errors: null, message: "Post updated successfully" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("updatePost", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "updatePost",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function deletePost(id: string) {
+export async function deletePost(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     await prisma.post.delete({ where: { id } });
 
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
+    return { success: true, errors: null, message: "Post deleted" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("deletePost", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deletePost",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function togglePostStatus(id: string) {
+export async function togglePostStatus(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     const post = await prisma.post.findUnique({ where: { id } });
-    if (!post) throw new Error("Not found");
+    if (!post) return { success: false, errors: null, message: "Not found" };
 
     const newStatus = post.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
 
@@ -216,23 +237,13 @@ export async function togglePostStatus(id: string) {
 
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
+    return { success: true, errors: null, message: `Post ${newStatus.toLowerCase()}` };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("togglePostStatus", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "togglePostStatus",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
-}
-
-async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
-
-  await logger.error(message, {
-    action,
-    userId: extra?.userId as string | undefined,
-    context: extra?.context,
-    stack,
-  });
-
-  if (error instanceof Error) throw error;
-  throw new Error("An unexpected error occurred");
 }

@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { commentSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
 import { logger } from "@/app/lib/logger";
+
+import type { ActionResult } from "@/app/lib/form-types";
 
 export async function getComments() {
   try {
@@ -22,7 +23,7 @@ export async function getComments() {
   }
 }
 
-export async function createComment(formData: FormData) {
+export async function createComment(formData: FormData): Promise<ActionResult> {
   try {
     const raw = Object.fromEntries(formData);
     const parsed = commentSchema.safeParse({
@@ -36,7 +37,11 @@ export async function createComment(formData: FormData) {
         action: "createComment",
         context: { errors: parsed.error.issues },
       });
-      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+      return {
+        success: false,
+        errors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+        message: "Validation failed",
+      };
     }
 
     await prisma.comment.create({
@@ -50,16 +55,20 @@ export async function createComment(formData: FormData) {
     });
 
     revalidatePath("/blog");
+    return { success: true, errors: null, message: "Comment submitted for review" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("createComment", error);
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "createComment",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function approveComment(id: string) {
+export async function approveComment(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     await prisma.comment.update({
       where: { id },
@@ -67,16 +76,21 @@ export async function approveComment(id: string) {
     });
 
     revalidatePath("/admin/comments");
+    return { success: true, errors: null, message: "Comment approved" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("approveComment", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "approveComment",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function rejectComment(id: string) {
+export async function rejectComment(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     await prisma.comment.update({
       where: { id },
@@ -84,37 +98,32 @@ export async function rejectComment(id: string) {
     });
 
     revalidatePath("/admin/comments");
+    return { success: true, errors: null, message: "Comment rejected" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("rejectComment", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "rejectComment",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
 
-export async function deleteComment(id: string) {
+export async function deleteComment(id: string): Promise<ActionResult> {
   try {
     const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
 
     await prisma.comment.delete({ where: { id } });
 
     revalidatePath("/admin/comments");
+    return { success: true, errors: null, message: "Comment deleted" };
   } catch (error) {
-    unstable_rethrow(error);
-    await logAndRethrow("deleteComment", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deleteComment",
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
   }
-}
-
-async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
-
-  await logger.error(message, {
-    action,
-    userId: extra?.userId as string | undefined,
-    context: extra?.context,
-    stack,
-  });
-
-  if (error instanceof Error) throw error;
-  throw new Error("An unexpected error occurred");
 }
