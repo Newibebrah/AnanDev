@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "Portfolio",
-  fullName: "John Doe",
+  fullName: "Ananta",
   role: "Full-Stack Developer",
   tagline: "I build modern, scalable web applications with clean code and great user experiences.",
   bio: "A passionate full-stack developer with experience building web applications using modern technologies. I love turning complex problems into simple, beautiful, and intuitive solutions.",
