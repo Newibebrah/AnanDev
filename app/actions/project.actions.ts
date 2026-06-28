@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { projectSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
@@ -102,6 +102,7 @@ export async function createProject(formData: FormData) {
     revalidatePath("/projects");
     redirect("/admin/projects");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("createProject", error, { userId: (await auth())?.user?.id });
   }
 }
@@ -157,6 +158,7 @@ export async function updateProject(id: string, formData: FormData) {
     revalidatePath("/projects");
     redirect("/admin/projects");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("updateProject", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -175,6 +177,7 @@ export async function deleteProject(id: string) {
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("deleteProject", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -195,6 +198,7 @@ export async function toggleProjectFeatured(id: string) {
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("toggleProjectFeatured", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -211,9 +215,6 @@ function safeParseJsonArray(value: string): string[] {
 }
 
 async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
-  if (isRedirectError) throw error;
-
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
@@ -224,7 +225,6 @@ async function logAndRethrow(action: string, error: unknown, extra?: { userId?: 
     stack,
   });
 
-  throw typeof error === "object" && error !== null && "message" in error
-    ? error
-    : new Error("An unexpected error occurred");
+  if (error instanceof Error) throw error;
+  throw new Error("An unexpected error occurred");
 }

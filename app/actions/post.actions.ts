@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { postSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
@@ -123,6 +123,7 @@ export async function createPost(formData: FormData) {
     revalidatePath("/blog");
     redirect("/admin/blog");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("createPost", error, { userId: (await auth())?.user?.id });
   }
 }
@@ -175,6 +176,7 @@ export async function updatePost(id: string, formData: FormData) {
     revalidatePath("/blog");
     redirect("/admin/blog");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("updatePost", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -189,6 +191,7 @@ export async function deletePost(id: string) {
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("deletePost", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -214,14 +217,12 @@ export async function togglePostStatus(id: string) {
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("togglePostStatus", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
 async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
-  if (isRedirectError) throw error;
-
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
@@ -232,7 +233,6 @@ async function logAndRethrow(action: string, error: unknown, extra?: { userId?: 
     stack,
   });
 
-  throw typeof error === "object" && error !== null && "message" in error
-    ? error
-    : new Error("An unexpected error occurred");
+  if (error instanceof Error) throw error;
+  throw new Error("An unexpected error occurred");
 }

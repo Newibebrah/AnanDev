@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { prisma } from "@/app/lib/prisma";
 import { commentSchema } from "@/app/lib/validations";
 import { auth } from "@/app/lib/auth";
@@ -50,6 +51,7 @@ export async function createComment(formData: FormData) {
 
     revalidatePath("/blog");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("createComment", error);
   }
 }
@@ -66,6 +68,7 @@ export async function approveComment(id: string) {
 
     revalidatePath("/admin/comments");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("approveComment", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -82,6 +85,7 @@ export async function rejectComment(id: string) {
 
     revalidatePath("/admin/comments");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("rejectComment", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
@@ -95,14 +99,12 @@ export async function deleteComment(id: string) {
 
     revalidatePath("/admin/comments");
   } catch (error) {
+    unstable_rethrow(error);
     await logAndRethrow("deleteComment", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
 async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
-  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
-  if (isRedirectError) throw error;
-
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
@@ -113,5 +115,6 @@ async function logAndRethrow(action: string, error: unknown, extra?: { userId?: 
     stack,
   });
 
-  throw typeof error === "object" && error !== null && "message" in error ? error : new Error("An unexpected error occurred");
+  if (error instanceof Error) throw error;
+  throw new Error("An unexpected error occurred");
 }
