@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { formatDate, truncate } from "@/app/lib/utils";
 import type { Post } from "@prisma/client";
 
@@ -7,11 +8,13 @@ export default function BlogCard({ post }: { post: Post }) {
     <Link href={`/blog/${post.slug}`} className="group block">
       <article className="h-full rounded-xl border border-border/50 bg-card overflow-hidden transition-all duration-300 card-glow hover:border-primary/30 hover:-translate-y-1">
         {post.coverImage && (
-          <div className="aspect-video w-full overflow-hidden">
-            <img
+          <div className="aspect-video w-full overflow-hidden relative">
+            <Image
               src={post.coverImage}
               alt={post.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
           </div>
         )}

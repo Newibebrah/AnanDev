@@ -1,10 +1,22 @@
 export const siteConfig = {
-  name: "Portfolio",
+  name: "AnanDev",
   fullName: "Ananta",
   role: "Full-Stack Developer",
   tagline: "I build modern, scalable web applications with clean code and great user experiences.",
   bio: "A passionate full-stack developer with experience building web applications using modern technologies. I love turning complex problems into simple, beautiful, and intuitive solutions.",
   avatarUrl: "/avatar-placeholder.svg",
+  url: process.env.NEXT_PUBLIC_URL || "https://anan-dev.vercel.app",
+  keywords: [
+    "portofolio",
+    "blog",
+    "developer",
+    "programmer",
+    "react",
+    "nextjs",
+    "full-stack",
+    "web developer",
+    "Ananta",
+  ],
   aboutSlides: [
     {
       title: "Full-Stack Developer",

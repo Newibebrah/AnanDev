@@ -6,8 +6,50 @@ import { Separator } from "@/app/components/ui/separator";
 import CommentSection from "@/app/components/comment/CommentSection";
 import MarkdownContent from "@/app/components/public/MarkdownContent";
 import Link from "next/link";
+import { ArticleStructuredData } from "@/app/components/seo/ArticleStructuredData";
+import { BreadcrumbStructuredData } from "@/app/components/seo/BreadcrumbStructuredData";
+import { siteConfig } from "@/app/lib/site-config";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+
+  if (!post) {
+    return {
+      title: "Artikel Tidak Ditemukan",
+      description: "Maaf, artikel yang Anda cari tidak tersedia.",
+    };
+  }
+
+  return {
+    title: post.title,
+    description: post.excerpt || `Baca artikel tentang ${post.title}`,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt || `Baca artikel tentang ${post.title}`,
+      type: "article",
+      publishedTime: post.createdAt.toISOString(),
+      modifiedTime: post.updatedAt?.toISOString(),
+      authors: [post.author?.username || siteConfig.fullName],
+      images: post.coverImage
+        ? [{ url: post.coverImage, width: 1200, height: 630, alt: post.title }]
+        : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt || `Baca artikel tentang ${post.title}`,
+      images: post.coverImage ? [post.coverImage] : [],
+    },
+    alternates: {
+      canonical: `${siteConfig.url}/blog/${post.slug}`,
+    },
+  };
+}
 
 export default async function BlogDetailPage({
   params,
@@ -20,51 +62,70 @@ export default async function BlogDetailPage({
   if (!post || post.status !== "PUBLISHED") notFound();
 
   return (
-    <article className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
-      <Link
-        href="/blog"
-        className="text-sm text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1 transition-colors"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        Back to blog
-      </Link>
+    <>
+      <BreadcrumbStructuredData
+        items={[
+          { name: "Home", url: siteConfig.url },
+          { name: "Blog", url: `${siteConfig.url}/blog` },
+          { name: post.title, url: `${siteConfig.url}/blog/${post.slug}` },
+        ]}
+      />
+      <ArticleStructuredData
+        title={post.title}
+        description={post.excerpt || `Baca artikel tentang ${post.title}`}
+        image={post.coverImage || "/og-image.png"}
+        datePublished={post.createdAt.toISOString()}
+        dateModified={post.updatedAt?.toISOString()}
+        authorName={post.author?.username || siteConfig.fullName}
+        url={`${siteConfig.url}/blog/${post.slug}`}
+      />
 
-      {post.coverImage && (
-        <div className="aspect-video w-full overflow-hidden rounded-xl mb-8">
-          <img
-            src={post.coverImage}
-            alt={post.title}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      )}
+      <article className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
+        <Link
+          href="/blog"
+          className="text-sm text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Back to blog
+        </Link>
 
-      <header className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{post.title}</h1>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-          <time dateTime={post.createdAt.toISOString()}>{formatDate(post.createdAt)}</time>
-          {post.author && (
-            <>
-              <span className="text-border">&middot;</span>
-              <span>{post.author.username}</span>
-            </>
-          )}
-        </div>
-      </header>
+        {post.coverImage && (
+          <div className="aspect-video w-full overflow-hidden rounded-xl mb-8">
+            <img
+              src={post.coverImage}
+              alt={post.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
 
-      {post.excerpt && (
-        <p className="text-base md:text-lg text-muted-foreground italic mb-8 leading-relaxed border-l-4 border-primary/20 pl-4">
-          {post.excerpt}
-        </p>
-      )}
+        <header className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">{post.title}</h1>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+            <time dateTime={post.createdAt.toISOString()}>{formatDate(post.createdAt)}</time>
+            {post.author && (
+              <>
+                <span className="text-border">&middot;</span>
+                <span>{post.author.username}</span>
+              </>
+            )}
+          </div>
+        </header>
 
-      <Separator className="mb-8" />
+        {post.excerpt && (
+          <p className="text-base md:text-lg text-muted-foreground italic mb-8 leading-relaxed border-l-4 border-primary/20 pl-4">
+            {post.excerpt}
+          </p>
+        )}
 
-      <MarkdownContent content={post.content} />
+        <Separator className="mb-8" />
 
-      <Separator className="my-12" />
+        <MarkdownContent content={post.content} />
 
-      <CommentSection postId={post.id} comments={post.comments} />
-    </article>
+        <Separator className="my-12" />
+
+        <CommentSection postId={post.id} comments={post.comments} />
+      </article>
+    </>
   );
 }

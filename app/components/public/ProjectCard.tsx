@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/app/components/ui/badge";
 import type { Project } from "@prisma/client";
 
@@ -9,11 +10,13 @@ export default function ProjectCard({ project }: { project: Project }) {
     <Link href={`/projects/${project.slug}`} className="group block">
       <article className="h-full rounded-xl border border-border/50 bg-card overflow-hidden transition-all duration-300 card-glow hover:border-primary/30 hover:-translate-y-1">
         {project.thumbnail && (
-          <div className="aspect-video w-full overflow-hidden">
-            <img
+          <div className="aspect-video w-full overflow-hidden relative">
+            <Image
               src={project.thumbnail}
               alt={project.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
           </div>
         )}
