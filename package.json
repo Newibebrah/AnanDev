@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && prisma db push || true"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
