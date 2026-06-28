@@ -1,9 +1,10 @@
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { getComments, approveComment, rejectComment, deleteComment } from "@/app/actions/comment.actions";
+import { getComments, approveComment, rejectComment, deleteComment, deleteAllComments } from "@/app/actions/comment.actions";
 import { formatDate } from "@/app/lib/utils";
 import { InlineAction } from "@/app/components/admin/inline-action";
+import { DeleteAllButton } from "@/app/components/admin/delete-all-button";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,12 @@ export default async function AdminCommentsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Comments</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Comments</h1>
+        {comments.length > 0 && (
+          <DeleteAllButton action={deleteAllComments} label="Delete All" />
+        )}
+      </div>
 
       <Card>
         <CardContent className="p-0">

@@ -16,7 +16,7 @@ export type ChatMessageData = {
   createdAt: Date;
 };
 
-const RATE_LIMIT_SECONDS = 30;
+const RATE_LIMIT_SECONDS = 2;
 
 function hashIp(ip: string): string {
   return createHash("sha256").update(ip + "chat-secret-salt").digest("hex").slice(0, 16);
@@ -114,5 +114,23 @@ export async function deleteChatMessage(id: string): Promise<ActionResult> {
       stack: error instanceof Error ? error.stack : undefined,
     });
     return { success: false, errors: null, message: "Gagal menghapus pesan" };
+  }
+}
+
+export async function deleteAllChatMessages(_formData?: FormData): Promise<ActionResult> {
+  try {
+    const session = await auth();
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
+
+    const { count } = await prisma.chatMessage.deleteMany();
+
+    revalidatePath("/admin/chat");
+    return { success: true, errors: null, message: `${count} pesan dihapus` };
+  } catch (error) {
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deleteAllChatMessages",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "Gagal menghapus semua pesan" };
   }
 }

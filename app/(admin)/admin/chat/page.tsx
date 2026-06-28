@@ -1,8 +1,9 @@
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { getMessages, deleteChatMessage } from "@/app/actions/chat.actions";
+import { getMessages, deleteChatMessage, deleteAllChatMessages } from "@/app/actions/chat.actions";
 import { formatDate } from "@/app/lib/utils";
 import { InlineAction } from "@/app/components/admin/inline-action";
+import { DeleteAllButton } from "@/app/components/admin/delete-all-button";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,12 @@ export default async function AdminChatPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Chat Messages</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Chat Messages</h1>
+        {messages.length > 0 && (
+          <DeleteAllButton action={deleteAllChatMessages} label="Delete All" />
+        )}
+      </div>
 
       <Card>
         <CardContent className="p-0">

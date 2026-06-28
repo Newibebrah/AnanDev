@@ -1,9 +1,10 @@
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { Card, CardContent } from "@/app/components/ui/card";
-import { getMessages, markMessageRead, deleteMessage } from "@/app/actions/message.actions";
+import { getMessages, markMessageRead, deleteMessage, deleteAllMessages } from "@/app/actions/message.actions";
 import { formatDate } from "@/app/lib/utils";
 import { InlineAction } from "@/app/components/admin/inline-action";
+import { DeleteAllButton } from "@/app/components/admin/delete-all-button";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,12 @@ export default async function AdminMessagesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Messages</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Messages</h1>
+        {messages.length > 0 && (
+          <DeleteAllButton action={deleteAllMessages} label="Delete All" />
+        )}
+      </div>
 
       <Card>
         <CardContent className="p-0">

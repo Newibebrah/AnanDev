@@ -127,3 +127,21 @@ export async function deleteComment(id: string): Promise<ActionResult> {
     return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
+
+export async function deleteAllComments(_formData?: FormData): Promise<ActionResult> {
+  try {
+    const session = await auth();
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
+
+    const { count } = await prisma.comment.deleteMany();
+
+    revalidatePath("/admin/comments");
+    return { success: true, errors: null, message: `${count} comments deleted` };
+  } catch (error) {
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deleteAllComments",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
+  }
+}

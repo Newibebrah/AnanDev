@@ -2,6 +2,8 @@ import { prisma } from "@/app/lib/prisma";
 import { auth } from "@/app/lib/auth";
 import { redirect } from "next/navigation";
 import { ErrorLogList } from "./error-list";
+import { deleteAllErrorLogs } from "@/app/actions/error.actions";
+import { DeleteAllButton } from "@/app/components/admin/delete-all-button";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +38,12 @@ export default async function ErrorLogsPage({
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Error Logs</h1>
-        <p className="text-sm text-muted-foreground">{total} total entries</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{total} total entries</p>
+          {total > 0 && (
+            <DeleteAllButton action={deleteAllErrorLogs} label="Delete All" />
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6">

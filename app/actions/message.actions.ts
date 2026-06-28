@@ -94,3 +94,21 @@ export async function deleteMessage(id: string): Promise<ActionResult> {
     return { success: false, errors: null, message: "An unexpected error occurred" };
   }
 }
+
+export async function deleteAllMessages(_formData?: FormData): Promise<ActionResult> {
+  try {
+    const session = await auth();
+    if (!session?.user) return { success: false, errors: null, message: "Unauthorized" };
+
+    const { count } = await prisma.message.deleteMany();
+
+    revalidatePath("/admin/messages");
+    return { success: true, errors: null, message: `${count} messages deleted` };
+  } catch (error) {
+    await logger.error(error instanceof Error ? error.message : String(error), {
+      action: "deleteAllMessages",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return { success: false, errors: null, message: "An unexpected error occurred" };
+  }
+}
