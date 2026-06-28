@@ -11,7 +11,6 @@ import type { ChatMessageData } from "@/app/actions/chat.actions";
 export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
   const [messages, setMessages] = useState<ChatMessageData[]>(initial);
   const containerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef(true);
 
   const checkNearBottom = useCallback(() => {
@@ -21,8 +20,13 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
   }, []);
 
-  const scrollToBottom = useCallback((smooth = true) => {
-    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
+  const scrollContainerToBottom = useCallback((smooth = true) => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: smooth ? "smooth" : "instant",
+    });
   }, []);
 
   const [state, formAction, pending] = useActionState(
@@ -31,8 +35,7 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
       if (result.success) {
         const updated = await getMessages();
         setMessages(updated);
-        isNearBottomRef.current = true;
-        setTimeout(() => scrollToBottom(true), 50);
+        setTimeout(() => scrollContainerToBottom(true), 50);
       } else if (result.message) {
         toast.error(result.message);
       }
@@ -46,24 +49,24 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
       const updated = await getMessages();
       setMessages((prev) => {
         if (updated.length > prev.length && isNearBottomRef.current) {
-          setTimeout(() => scrollToBottom(true), 50);
+          setTimeout(() => scrollContainerToBottom(true), 50);
         }
         return updated;
       });
     }, 5000);
     return () => clearInterval(interval);
-  }, [scrollToBottom]);
+  }, [scrollContainerToBottom]);
 
   useEffect(() => {
-    scrollToBottom(false);
+    scrollContainerToBottom(false);
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)]">
+    <div className="flex flex-col">
       <Card
         ref={containerRef}
         onScroll={checkNearBottom}
-        className="flex-1 overflow-y-auto mb-4"
+        className="overflow-y-auto mb-4 min-h-[30rem] max-h-[70vh]"
       >
         <CardContent className="p-4 space-y-3">
           {messages.length === 0 && (
@@ -87,7 +90,6 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
               <p className="text-sm leading-relaxed break-words">{msg.content}</p>
             </div>
           ))}
-          <div ref={bottomRef} />
         </CardContent>
       </Card>
 
