@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useActionState } from "react";
+import { useState, useEffect, useRef, useActionState, useCallback } from "react";
 import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { sendMessage, getMessages } from "@/app/actions/chat.actions";
@@ -11,8 +10,20 @@ import type { ChatMessageData } from "@/app/actions/chat.actions";
 
 export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
   const [messages, setMessages] = useState<ChatMessageData[]>(initial);
+  const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const [name, setName] = useState("");
+  const isNearBottomRef = useRef(true);
+
+  const checkNearBottom = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const threshold = 100;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "instant" });
+  }, []);
 
   const [state, formAction, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
@@ -20,6 +31,8 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
       if (result.success) {
         const updated = await getMessages();
         setMessages(updated);
+        isNearBottomRef.current = true;
+        setTimeout(() => scrollToBottom(true), 50);
       } else if (result.message) {
         toast.error(result.message);
       }
@@ -31,18 +44,27 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
   useEffect(() => {
     const interval = setInterval(async () => {
       const updated = await getMessages();
-      setMessages(updated);
+      setMessages((prev) => {
+        if (updated.length > prev.length && isNearBottomRef.current) {
+          setTimeout(() => scrollToBottom(true), 50);
+        }
+        return updated;
+      });
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [scrollToBottom]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    scrollToBottom(false);
+  }, []);
 
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)]">
-      <Card className="flex-1 overflow-y-auto mb-4">
+      <Card
+        ref={containerRef}
+        onScroll={checkNearBottom}
+        className="flex-1 overflow-y-auto mb-4"
+      >
         <CardContent className="p-4 space-y-3">
           {messages.length === 0 && (
             <p className="text-center text-muted-foreground py-12">
@@ -76,16 +98,9 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
           formAction(fd);
           e.currentTarget.reset();
         }}
-        className="flex flex-col sm:flex-row gap-2"
+        className="flex gap-2"
       >
-        <Input
-          name="name"
-          placeholder="Nama (opsional)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="sm:w-44"
-          maxLength={20}
-        />
+        <input type="hidden" name="name" value="Anonymous" />
         <Textarea
           name="content"
           placeholder="Tulis pesan..."
