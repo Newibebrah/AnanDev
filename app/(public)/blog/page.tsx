@@ -13,20 +13,24 @@ export default async function BlogPage() {
   const posts = await getPublishedPosts();
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-12">
-      <h1 className="text-3xl font-bold mb-2">Blog</h1>
-      <p className="text-muted-foreground mb-8">
-        Thoughts, tutorials, and insights.
-      </p>
+    <div className="container mx-auto max-w-5xl px-4 py-12 md:py-16">
+      <div className="mb-10">
+        <h1 className="text-3xl md:text-4xl font-bold mb-2">Blog</h1>
+        <p className="text-muted-foreground">
+          Thoughts, tutorials, and insights.
+        </p>
+      </div>
 
       {posts.length === 0 ? (
-        <p className="text-center text-muted-foreground py-12">
+        <p className="text-center text-muted-foreground py-20">
           No posts yet. Check back later!
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {posts.map((post) => (
-            <BlogCard key={post.id} post={post} />
+          {posts.map((post, i) => (
+            <div key={post.id} className="animate-fade-up" style={{ animationDelay: `${i * 0.05}s` }}>
+              <BlogCard post={post} />
+            </div>
           ))}
         </div>
       )}

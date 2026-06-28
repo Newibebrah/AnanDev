@@ -110,49 +110,72 @@
 }
 
 @utility animate-pulse-slow {
-  animation: pulse-slow 2s ease-in-out infinite;
+  animation: pulse-slow 3s ease-in-out infinite;
 }
 
-@utility card-hover {
-  @apply overflow-hidden transition-all duration-300;
-  &:hover {
-    @apply shadow-xl;
-    transform: scale(1.02);
-  }
-}
-
-@utility glass {
-  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg border-b border-white/20 dark:border-slate-800/50;
-}
-
-@utility hero-gradient {
-  background: linear-gradient(to bottom right, oklch(0.962 0.015 264.376 / 0.5), white, oklch(0.986 0.019 359.994 / 0.5));
-}
-
-.dark .hero-gradient {
-  background: linear-gradient(to bottom right, oklch(0.145 0 0), oklch(0.205 0.042 265.755 / 0.2), oklch(0.145 0 0));
-}
-
-@keyframes pulse-slow {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@utility animate-fade-in {
+  animation: fade-in 0.6s ease-out;
 }
 
 @utility animate-fade-up {
   animation: fade-up 0.6s ease-out;
+}
+
+@utility animate-scale-in {
+  animation: scale-in 0.4s ease-out;
+}
+
+@utility glass {
+  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-800/50;
+}
+
+@utility glass-nav {
+  @apply bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50;
+}
+
+@utility card-glow {
+  @apply transition-all duration-300;
+  &:hover {
+    box-shadow: 0 0 20px oklch(0.525 0.24 264.052 / 0.15);
+  }
+}
+
+@utility text-gradient {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, oklch(0.525 0.24 264.052), oklch(0.712 0.234 264.052));
+}
+
+@utility hero-grid-bg {
+  background-image:
+    radial-gradient(circle at 1px 1px, oklch(0.525 0.24 264.052 / 0.08) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+.dark .hero-grid-bg {
+  background-image:
+    radial-gradient(circle at 1px 1px, oklch(0.712 0.234 264.052 / 0.08) 1px, transparent 0);
+}
+
+@utility glow-dot {
+  @apply absolute rounded-full blur-3xl opacity-20 dark:opacity-10;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
