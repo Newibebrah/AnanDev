@@ -13,6 +13,7 @@ const sidebarLinks = [
   { href: "/admin/comments", label: "Comments", icon: "💬" },
   { href: "/admin/messages", label: "Messages", icon: "✉️" },
   { href: "/admin/errors", label: "Error Logs", icon: "⚠️" },
+  { href: "/admin/chat", label: "Chat", icon: "💭" },
 ];
 
 export default function Sidebar() {

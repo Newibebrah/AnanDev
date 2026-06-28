@@ -70,6 +70,14 @@ model Message {
   createdAt DateTime @default(now())
 }
 
+model ChatMessage {
+  id        String   @id @default(cuid())
+  name      String   @default("Anonymous")
+  content   String
+  createdAt DateTime @default(now())
+  rateKey   String?
+}
+
 model ErrorLog {
   id        String   @id @default(cuid())
   level     String   // "debug" | "info" | "warn" | "error"

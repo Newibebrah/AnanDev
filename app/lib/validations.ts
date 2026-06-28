@@ -34,6 +34,11 @@ export const messageSchema = z.object({
   content: z.string().min(10).max(5000),
 });
 
+export const chatMessageSchema = z.object({
+  name: z.string().max(20).default("Anonymous"),
+  content: z.string().min(1).max(500),
+});
+
 export const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
