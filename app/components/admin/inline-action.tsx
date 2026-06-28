@@ -22,7 +22,7 @@ export function InlineAction({ action, children, className }: InlineActionProps)
   }, [state]);
 
   return (
-    <form action={formAction} className={className}>
+    <form onSubmit={(e) => { e.preventDefault(); formAction(new FormData(e.currentTarget)); }} className={className}>
       {state?.message && !state.success && (
         <p className="text-red-500 text-xs mb-1">{state.message}</p>
       )}

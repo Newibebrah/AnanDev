@@ -53,7 +53,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
           <CardTitle>Project Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); formAction(new FormData(e.currentTarget)); }} className="space-y-4">
             <div className="space-y-1">
               <Label htmlFor="title">Title</Label>
               <Input

@@ -96,7 +96,7 @@ export default function CommentSection({
           </Button>
 
           {replyingTo === comment.id && (
-            <form action={replyAction} className="mt-3 space-y-2">
+            <form onSubmit={(e) => { e.preventDefault(); replyAction(new FormData(e.currentTarget)); }} className="mt-3 space-y-2">
               <input type="hidden" name="parentId" value={comment.id} />
               <Input name="name" placeholder="Your name" required className="max-w-xs" />
               <Input name="email" type="email" placeholder="Email (optional)" className="max-w-xs" />
@@ -124,7 +124,7 @@ export default function CommentSection({
         Comments ({comments.length})
       </h2>
 
-      <form action={formAction} className="mb-8 space-y-3">
+      <form onSubmit={(e) => { e.preventDefault(); formAction(new FormData(e.currentTarget)); }} className="mb-8 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="name">Name</Label>
