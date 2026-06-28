@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export default function TestFormPage() {
   return (
     <div className="p-8 max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-4">Test Server Action</h1>
+      <h1 className="text-xl font-bold mb-4">Test Server Action (no Prisma)</h1>
       <form action={testServerAction} className="space-y-4">
         <input
           name="name"
@@ -20,8 +20,9 @@ export default function TestFormPage() {
           Submit Test
         </button>
       </form>
-      <p className="mt-4 text-sm text-gray-500">
-        After submit, check /admin/errors for &quot;test-server-action&quot; entry.
+      <p className="mt-4 text-sm text-yellow-600 bg-yellow-50 border p-3 rounded">
+        ⚠️ This server action has ZERO imports — no Prisma, no logger.
+        If this works, the issue is Prisma bundling in server actions.
       </p>
     </div>
   );
