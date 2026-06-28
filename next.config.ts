@@ -1,5 +1,3 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://anandev.vercel.app";
-
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
