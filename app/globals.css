@@ -102,10 +102,22 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+    overscroll-behavior: none;
+  }
+  input, textarea, button, select, a {
+    @apply outline-none;
+  }
+  input:focus-visible, textarea:focus-visible, button:focus-visible, select:focus-visible, a:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
