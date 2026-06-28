@@ -15,7 +15,7 @@ export async function getPosts() {
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
-    logger.error("Failed to fetch posts", {
+    await logger.error("Failed to fetch posts", {
       action: "getPosts",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -30,7 +30,7 @@ export async function getPublishedPosts() {
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
-    logger.error("Failed to fetch published posts", {
+    await logger.error("Failed to fetch published posts", {
       action: "getPublishedPosts",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -57,7 +57,7 @@ export async function getPostBySlug(slug: string) {
       },
     });
   } catch (error) {
-    logger.error("Failed to fetch post by slug", {
+    await logger.error("Failed to fetch post by slug", {
       action: "getPostBySlug",
       context: { slug },
       stack: error instanceof Error ? error.stack : undefined,
@@ -70,7 +70,7 @@ export async function getPostById(id: string) {
   try {
     return await prisma.post.findUnique({ where: { id } });
   } catch (error) {
-    logger.error("Failed to fetch post by id", {
+    await logger.error("Failed to fetch post by id", {
       action: "getPostById",
       context: { id },
       stack: error instanceof Error ? error.stack : undefined,
@@ -101,7 +101,7 @@ export async function createPost(formData: FormData) {
     });
 
     if (!parsed.success) {
-      logger.error("Post validation failed", {
+      await logger.error("Post validation failed", {
         action: "createPost",
         userId: session.user.id as string,
         context: { errors: parsed.error.issues, raw: { title, slug } },
@@ -123,7 +123,7 @@ export async function createPost(formData: FormData) {
     revalidatePath("/blog");
     redirect("/admin/blog");
   } catch (error) {
-    logAndRethrow("createPost", error, { userId: (await auth())?.user?.id });
+    await logAndRethrow("createPost", error, { userId: (await auth())?.user?.id });
   }
 }
 
@@ -155,7 +155,7 @@ export async function updatePost(id: string, formData: FormData) {
     });
 
     if (!parsed.success) {
-      logger.error("Post validation failed", {
+      await logger.error("Post validation failed", {
         action: "updatePost",
         userId: session.user.id as string,
         context: { id, errors: parsed.error.issues, raw: { title, slug } },
@@ -175,7 +175,7 @@ export async function updatePost(id: string, formData: FormData) {
     revalidatePath("/blog");
     redirect("/admin/blog");
   } catch (error) {
-    logAndRethrow("updatePost", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("updatePost", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -189,7 +189,7 @@ export async function deletePost(id: string) {
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
   } catch (error) {
-    logAndRethrow("deletePost", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("deletePost", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -214,18 +214,18 @@ export async function togglePostStatus(id: string) {
     revalidatePath("/admin/blog");
     revalidatePath("/blog");
   } catch (error) {
-    logAndRethrow("togglePostStatus", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("togglePostStatus", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
-function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
   const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
   if (isRedirectError) throw error;
 
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
-  logger.error(message, {
+  await logger.error(message, {
     action,
     userId: extra?.userId as string | undefined,
     context: extra?.context,

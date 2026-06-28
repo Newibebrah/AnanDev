@@ -12,7 +12,7 @@ export async function getProjects() {
   try {
     return await prisma.project.findMany({ orderBy: { createdAt: "desc" } });
   } catch (error) {
-    logger.error("Failed to fetch projects", {
+    await logger.error("Failed to fetch projects", {
       action: "getProjects",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -26,7 +26,7 @@ export async function getPublishedProjects() {
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
-    logger.error("Failed to fetch published projects", {
+    await logger.error("Failed to fetch published projects", {
       action: "getPublishedProjects",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -38,7 +38,7 @@ export async function getProjectBySlug(slug: string) {
   try {
     return await prisma.project.findUnique({ where: { slug } });
   } catch (error) {
-    logger.error("Failed to fetch project by slug", {
+    await logger.error("Failed to fetch project by slug", {
       action: "getProjectBySlug",
       context: { slug },
       stack: error instanceof Error ? error.stack : undefined,
@@ -51,7 +51,7 @@ export async function getProjectById(id: string) {
   try {
     return await prisma.project.findUnique({ where: { id } });
   } catch (error) {
-    logger.error("Failed to fetch project by id", {
+    await logger.error("Failed to fetch project by id", {
       action: "getProjectById",
       context: { id },
       stack: error instanceof Error ? error.stack : undefined,
@@ -86,7 +86,7 @@ export async function createProject(formData: FormData) {
     });
 
     if (!parsed.success) {
-      logger.error("Project validation failed", {
+      await logger.error("Project validation failed", {
         action: "createProject",
         userId: session.user.id as string,
         context: { errors: parsed.error.issues, raw: { title, slug } },
@@ -102,7 +102,7 @@ export async function createProject(formData: FormData) {
     revalidatePath("/projects");
     redirect("/admin/projects");
   } catch (error) {
-    logAndRethrow("createProject", error, { userId: (await auth())?.user?.id });
+    await logAndRethrow("createProject", error, { userId: (await auth())?.user?.id });
   }
 }
 
@@ -140,7 +140,7 @@ export async function updateProject(id: string, formData: FormData) {
     });
 
     if (!parsed.success) {
-      logger.error("Project validation failed", {
+      await logger.error("Project validation failed", {
         action: "updateProject",
         userId: session.user.id as string,
         context: { id, errors: parsed.error.issues, raw: { title, slug } },
@@ -157,7 +157,7 @@ export async function updateProject(id: string, formData: FormData) {
     revalidatePath("/projects");
     redirect("/admin/projects");
   } catch (error) {
-    logAndRethrow("updateProject", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("updateProject", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -175,7 +175,7 @@ export async function deleteProject(id: string) {
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
   } catch (error) {
-    logAndRethrow("deleteProject", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("deleteProject", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -195,7 +195,7 @@ export async function toggleProjectFeatured(id: string) {
     revalidatePath("/admin/projects");
     revalidatePath("/projects");
   } catch (error) {
-    logAndRethrow("toggleProjectFeatured", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("toggleProjectFeatured", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -210,14 +210,14 @@ function safeParseJsonArray(value: string): string[] {
   }
 }
 
-function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
   const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
   if (isRedirectError) throw error;
 
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
-  logger.error(message, {
+  await logger.error(message, {
     action,
     userId: extra?.userId as string | undefined,
     context: extra?.context,

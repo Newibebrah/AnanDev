@@ -10,7 +10,7 @@ export async function getMessages() {
   try {
     return await prisma.message.findMany({ orderBy: { createdAt: "desc" } });
   } catch (error) {
-    logger.error("Failed to fetch messages", {
+    await logger.error("Failed to fetch messages", {
       action: "getMessages",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -28,7 +28,7 @@ export async function submitMessage(formData: FormData) {
     });
 
     if (!parsed.success) {
-      logger.error("Message validation failed", {
+      await logger.error("Message validation failed", {
         action: "submitMessage",
         context: { errors: parsed.error.issues },
       });
@@ -39,7 +39,7 @@ export async function submitMessage(formData: FormData) {
 
     revalidatePath("/admin/messages");
   } catch (error) {
-    logAndRethrow("submitMessage", error);
+    await logAndRethrow("submitMessage", error);
   }
 }
 
@@ -55,7 +55,7 @@ export async function markMessageRead(id: string) {
 
     revalidatePath("/admin/messages");
   } catch (error) {
-    logAndRethrow("markMessageRead", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("markMessageRead", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -68,18 +68,18 @@ export async function deleteMessage(id: string) {
 
     revalidatePath("/admin/messages");
   } catch (error) {
-    logAndRethrow("deleteMessage", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("deleteMessage", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
-function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
   const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
   if (isRedirectError) throw error;
 
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
-  logger.error(message, {
+  await logger.error(message, {
     action,
     userId: extra?.userId as string | undefined,
     context: extra?.context,

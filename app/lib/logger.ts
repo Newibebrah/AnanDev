@@ -18,23 +18,16 @@ function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS[level] >= LOG_LEVELS[currentLevel];
 }
 
-function formatMessage(level: LogLevel, message: string, context?: LogContext): string {
+function logToConsole(level: LogLevel, message: string, context?: LogContext) {
   const timestamp = new Date().toISOString();
   const ctx = context ? ` ${JSON.stringify(context)}` : "";
-  return `[${timestamp}] [${level.toUpperCase()}] ${message}${ctx}`;
-}
-
-function logToConsole(level: LogLevel, message: string, context?: LogContext) {
-  const formatted = formatMessage(level, message, context);
+  const formatted = `[${timestamp}] [${level.toUpperCase()}] ${message}${ctx}`;
   switch (level) {
     case "error":
       console.error(formatted);
       break;
     case "warn":
       console.warn(formatted);
-      break;
-    case "info":
-      console.info(formatted);
       break;
     default:
       console.log(formatted);
@@ -68,25 +61,25 @@ async function logToDatabase(params: {
 }
 
 export const logger = {
-  debug(message: string, context?: LogContext & { action?: string; userId?: string; url?: string }) {
+  debug(message: string, context?: LogContext) {
     if (!shouldLog("debug")) return;
     logToConsole("debug", message, context);
   },
 
-  info(message: string, context?: LogContext & { action?: string; userId?: string; url?: string }) {
+  info(message: string, context?: LogContext) {
     if (!shouldLog("info")) return;
     logToConsole("info", message, context);
   },
 
-  warn(message: string, context?: LogContext & { action?: string; userId?: string; url?: string }) {
+  async warn(message: string, context?: LogContext & { action?: string; userId?: string; url?: string }) {
     if (!shouldLog("warn")) return;
     logToConsole("warn", message, context);
-    logToDatabase({ level: "warn", message, ...context });
+    await logToDatabase({ level: "warn", message, ...context });
   },
 
-  error(message: string, context?: LogContext & { action?: string; userId?: string; url?: string; stack?: string }) {
+  async error(message: string, context?: LogContext & { action?: string; userId?: string; url?: string; stack?: string }) {
     if (!shouldLog("error")) return;
     logToConsole("error", message, context);
-    logToDatabase({ level: "error", message, ...context });
+    await logToDatabase({ level: "error", message, ...context });
   },
 };

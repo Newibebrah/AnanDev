@@ -13,7 +13,7 @@ export async function reportClientError(formData: FormData) {
 
   if (!message) return;
 
-  logger.error(message, {
+  await logger.error(message, {
     action: action || "client-error",
     userId: session?.user?.id as string | undefined,
     url: url || undefined,

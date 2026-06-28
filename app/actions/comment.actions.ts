@@ -13,7 +13,7 @@ export async function getComments() {
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
-    logger.error("Failed to fetch comments", {
+    await logger.error("Failed to fetch comments", {
       action: "getComments",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -31,7 +31,7 @@ export async function createComment(formData: FormData) {
     });
 
     if (!parsed.success) {
-      logger.error("Comment validation failed", {
+      await logger.error("Comment validation failed", {
         action: "createComment",
         context: { errors: parsed.error.issues },
       });
@@ -50,7 +50,7 @@ export async function createComment(formData: FormData) {
 
     revalidatePath("/blog");
   } catch (error) {
-    logAndRethrow("createComment", error);
+    await logAndRethrow("createComment", error);
   }
 }
 
@@ -66,7 +66,7 @@ export async function approveComment(id: string) {
 
     revalidatePath("/admin/comments");
   } catch (error) {
-    logAndRethrow("approveComment", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("approveComment", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -82,7 +82,7 @@ export async function rejectComment(id: string) {
 
     revalidatePath("/admin/comments");
   } catch (error) {
-    logAndRethrow("rejectComment", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("rejectComment", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
@@ -95,18 +95,18 @@ export async function deleteComment(id: string) {
 
     revalidatePath("/admin/comments");
   } catch (error) {
-    logAndRethrow("deleteComment", error, { userId: (await auth())?.user?.id, context: { id } });
+    await logAndRethrow("deleteComment", error, { userId: (await auth())?.user?.id, context: { id } });
   }
 }
 
-function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+async function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
   const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
   if (isRedirectError) throw error;
 
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
-  logger.error(message, {
+  await logger.error(message, {
     action,
     userId: extra?.userId as string | undefined,
     context: extra?.context,
