@@ -4,6 +4,7 @@ import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Label } from "@/app/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
+import { CancelButton } from "@/app/components/ui/cancel-button";
 import { getProjectById } from "@/app/actions/project.actions";
 import { createProject, updateProject } from "@/app/actions/project.actions";
 
@@ -130,9 +131,7 @@ export default async function AdminProjectFormPage({
               <Button type="submit">
                 {isNew ? "Create Project" : "Update Project"}
               </Button>
-              <Button variant="outline" type="button" onClick={() => window.history.back()}>
-                Cancel
-              </Button>
+              <CancelButton />
             </div>
           </form>
         </CardContent>
