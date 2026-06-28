@@ -88,7 +88,7 @@ export async function createPost(formData: FormData) {
 
   const slug = (raw.slug as string)?.trim() || slugify(raw.title as string);
 
-  const parsed = postSchema.parse({
+  const parsed = postSchema.safeParse({
     title: raw.title,
     slug,
     excerpt: raw.excerpt || undefined,
@@ -98,13 +98,22 @@ export async function createPost(formData: FormData) {
     publishedAt: published ? new Date().toISOString() : undefined,
   });
 
+  if (!parsed.success) {
+    logger.error("Post validation failed", {
+      action: "createPost",
+      userId: session.user.id as string,
+      context: { errors: parsed.error.issues, raw: { title: raw.title, slug } },
+    });
+    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+
   const authorId = session.user.id as string;
 
   try {
     await prisma.post.create({
       data: {
-        ...parsed,
-        publishedAt: parsed.publishedAt ? new Date(parsed.publishedAt) : null,
+        ...parsed.data,
+        publishedAt: parsed.data.publishedAt ? new Date(parsed.data.publishedAt) : null,
         authorId,
       },
     });
@@ -112,7 +121,7 @@ export async function createPost(formData: FormData) {
     logger.error("Failed to create post", {
       action: "createPost",
       userId: authorId,
-      context: { title: parsed.title, slug: parsed.slug },
+      context: { title: parsed.data.title, slug: parsed.data.slug },
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw new Error("Failed to create post");
@@ -147,7 +156,7 @@ export async function updatePost(id: string, formData: FormData) {
 
   const slug = (raw.slug as string)?.trim() || existing.slug;
 
-  const parsed = postSchema.parse({
+  const parsed = postSchema.safeParse({
     title: raw.title,
     slug,
     excerpt: raw.excerpt || undefined,
@@ -160,19 +169,28 @@ export async function updatePost(id: string, formData: FormData) {
         : existing.publishedAt?.toISOString() || undefined,
   });
 
+  if (!parsed.success) {
+    logger.error("Post validation failed", {
+      action: "updatePost",
+      userId: session.user.id as string,
+      context: { id, errors: parsed.error.issues, raw: { title: raw.title, slug } },
+    });
+    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+
   try {
     await prisma.post.update({
       where: { id },
       data: {
-        ...parsed,
-        publishedAt: parsed.publishedAt ? new Date(parsed.publishedAt) : null,
+        ...parsed.data,
+        publishedAt: parsed.data.publishedAt ? new Date(parsed.data.publishedAt) : null,
       },
     });
   } catch (error) {
     logger.error("Failed to update post", {
       action: "updatePost",
       userId: session.user.id as string,
-      context: { id, title: parsed.title },
+      context: { id, title: parsed.data.title },
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw new Error("Failed to update post");

@@ -70,7 +70,7 @@ export async function createProject(formData: FormData) {
 
   const techStack = safeParseJsonArray(raw.techStack as string);
 
-  const parsed = projectSchema.parse({
+  const parsed = projectSchema.safeParse({
     title: raw.title,
     slug,
     description: raw.description,
@@ -82,15 +82,24 @@ export async function createProject(formData: FormData) {
     isFeatured: raw.isFeatured === "on" || raw.isFeatured === "true",
   });
 
+  if (!parsed.success) {
+    logger.error("Project validation failed", {
+      action: "createProject",
+      userId: session.user.id as string,
+      context: { errors: parsed.error.issues, raw: { title: raw.title, slug } },
+    });
+    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+
   try {
     await prisma.project.create({
-      data: { ...parsed, techStack: JSON.stringify(parsed.techStack) },
+      data: { ...parsed.data, techStack: JSON.stringify(parsed.data.techStack) },
     });
   } catch (error) {
     logger.error("Failed to create project", {
       action: "createProject",
       userId: session.user.id as string,
-      context: { title: parsed.title, slug: parsed.slug },
+      context: { title: parsed.data.title, slug: parsed.data.slug },
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw new Error("Failed to create project");
@@ -107,11 +116,26 @@ export async function updateProject(id: string, formData: FormData) {
 
   const raw = Object.fromEntries(formData);
 
-  const slug = (raw.slug as string)?.trim() || slugify(raw.title as string);
+  let existing;
+  try {
+    existing = await prisma.project.findUnique({ where: { id } });
+  } catch (error) {
+    logger.error("Failed to find project for update", {
+      action: "updateProject",
+      userId: session.user.id as string,
+      context: { id },
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw new Error("Failed to update project");
+  }
+
+  if (!existing) throw new Error("Not found");
+
+  const slug = (raw.slug as string)?.trim() || existing.slug;
 
   const techStack = safeParseJsonArray(raw.techStack as string);
 
-  const parsed = projectSchema.parse({
+  const parsed = projectSchema.safeParse({
     title: raw.title,
     slug,
     description: raw.description,
@@ -123,16 +147,25 @@ export async function updateProject(id: string, formData: FormData) {
     isFeatured: raw.isFeatured === "on" || raw.isFeatured === "true",
   });
 
+  if (!parsed.success) {
+    logger.error("Project validation failed", {
+      action: "updateProject",
+      userId: session.user.id as string,
+      context: { id, errors: parsed.error.issues, raw: { title: raw.title, slug } },
+    });
+    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+
   try {
     await prisma.project.update({
       where: { id },
-      data: { ...parsed, techStack: JSON.stringify(parsed.techStack) },
+      data: { ...parsed.data, techStack: JSON.stringify(parsed.data.techStack) },
     });
   } catch (error) {
     logger.error("Failed to update project", {
       action: "updateProject",
       userId: session.user.id as string,
-      context: { id, title: parsed.title },
+      context: { id, title: parsed.data.title },
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw new Error("Failed to update project");
