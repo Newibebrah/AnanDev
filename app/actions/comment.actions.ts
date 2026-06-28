@@ -22,94 +22,96 @@ export async function getComments() {
 }
 
 export async function createComment(formData: FormData) {
-  const raw = Object.fromEntries(formData);
-  const parsed = commentSchema.parse({
-    name: raw.name,
-    email: raw.email || "",
-    content: raw.content,
-  });
-
   try {
+    const raw = Object.fromEntries(formData);
+    const parsed = commentSchema.safeParse({
+      name: raw.name,
+      email: raw.email || "",
+      content: raw.content,
+    });
+
+    if (!parsed.success) {
+      logger.error("Comment validation failed", {
+        action: "createComment",
+        context: { errors: parsed.error.issues },
+      });
+      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    }
+
     await prisma.comment.create({
       data: {
-        name: parsed.name,
-        email: parsed.email || null,
-        content: parsed.content,
+        name: parsed.data.name,
+        email: parsed.data.email || null,
+        content: parsed.data.content,
         postId: raw.postId as string,
         parentId: (raw.parentId as string) || null,
       },
     });
-  } catch (error) {
-    logger.error("Failed to create comment", {
-      action: "createComment",
-      context: { postId: raw.postId },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to submit comment");
-  }
 
-  revalidatePath("/blog");
+    revalidatePath("/blog");
+  } catch (error) {
+    logAndRethrow("createComment", error);
+  }
 }
 
 export async function approveComment(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
     await prisma.comment.update({
       where: { id },
       data: { isApproved: true },
     });
-  } catch (error) {
-    logger.error("Failed to approve comment", {
-      action: "approveComment",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to approve comment");
-  }
 
-  revalidatePath("/admin/comments");
+    revalidatePath("/admin/comments");
+  } catch (error) {
+    logAndRethrow("approveComment", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function rejectComment(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
     await prisma.comment.update({
       where: { id },
       data: { isApproved: false },
     });
-  } catch (error) {
-    logger.error("Failed to reject comment", {
-      action: "rejectComment",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to reject comment");
-  }
 
-  revalidatePath("/admin/comments");
+    revalidatePath("/admin/comments");
+  } catch (error) {
+    logAndRethrow("rejectComment", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function deleteComment(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
-    await prisma.comment.delete({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to delete comment", {
-      action: "deleteComment",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to delete comment");
-  }
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
 
-  revalidatePath("/admin/comments");
+    await prisma.comment.delete({ where: { id } });
+
+    revalidatePath("/admin/comments");
+  } catch (error) {
+    logAndRethrow("deleteComment", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
+}
+
+function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
+  if (isRedirectError) throw error;
+
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  logger.error(message, {
+    action,
+    userId: extra?.userId as string | undefined,
+    context: extra?.context,
+    stack,
+  });
+
+  throw typeof error === "object" && error !== null && "message" in error ? error : new Error("An unexpected error occurred");
 }

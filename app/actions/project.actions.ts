@@ -61,177 +61,142 @@ export async function getProjectById(id: string) {
 }
 
 export async function createProject(formData: FormData) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  const raw = Object.fromEntries(formData);
-
-  const slug = (raw.slug as string)?.trim() || slugify(raw.title as string);
-
-  const techStack = safeParseJsonArray(raw.techStack as string);
-
-  const parsed = projectSchema.safeParse({
-    title: raw.title,
-    slug,
-    description: raw.description,
-    content: raw.content,
-    thumbnail: raw.thumbnail || "",
-    demoUrl: raw.demoUrl || "",
-    githubUrl: raw.githubUrl || "",
-    techStack,
-    isFeatured: raw.isFeatured === "on" || raw.isFeatured === "true",
-  });
-
-  if (!parsed.success) {
-    logger.error("Project validation failed", {
-      action: "createProject",
-      userId: session.user.id as string,
-      context: { errors: parsed.error.issues, raw: { title: raw.title, slug } },
-    });
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
-  }
-
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const raw = Object.fromEntries(formData);
+
+    const title = (raw.title as string) || "";
+    const slug = (raw.slug as string)?.trim() || slugify(title);
+    const description = (raw.description as string) || "";
+    const content = (raw.content as string) || "";
+    const techStack = safeParseJsonArray(raw.techStack as string);
+
+    const parsed = projectSchema.safeParse({
+      title,
+      slug,
+      description,
+      content,
+      thumbnail: (raw.thumbnail as string) || "",
+      demoUrl: (raw.demoUrl as string) || "",
+      githubUrl: (raw.githubUrl as string) || "",
+      techStack,
+      isFeatured: raw.isFeatured === "on" || raw.isFeatured === "true",
+    });
+
+    if (!parsed.success) {
+      logger.error("Project validation failed", {
+        action: "createProject",
+        userId: session.user.id as string,
+        context: { errors: parsed.error.issues, raw: { title, slug } },
+      });
+      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    }
+
     await prisma.project.create({
       data: { ...parsed.data, techStack: JSON.stringify(parsed.data.techStack) },
     });
-  } catch (error) {
-    logger.error("Failed to create project", {
-      action: "createProject",
-      userId: session.user.id as string,
-      context: { title: parsed.data.title, slug: parsed.data.slug },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to create project");
-  }
 
-  revalidatePath("/admin/projects");
-  revalidatePath("/projects");
-  redirect("/admin/projects");
+    revalidatePath("/admin/projects");
+    revalidatePath("/projects");
+    redirect("/admin/projects");
+  } catch (error) {
+    logAndRethrow("createProject", error, { userId: (await auth())?.user?.id });
+  }
 }
 
 export async function updateProject(id: string, formData: FormData) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  const raw = Object.fromEntries(formData);
-
-  let existing;
   try {
-    existing = await prisma.project.findUnique({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to find project for update", {
-      action: "updateProject",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const raw = Object.fromEntries(formData);
+
+    let existing;
+    try {
+      existing = await prisma.project.findUnique({ where: { id } });
+    } catch {
+      throw new Error("Failed to find project for update");
+    }
+    if (!existing) throw new Error("Not found");
+
+    const title = (raw.title as string) || "";
+    const slug = (raw.slug as string)?.trim() || existing.slug;
+    const description = (raw.description as string) || "";
+    const content = (raw.content as string) || "";
+    const techStack = safeParseJsonArray(raw.techStack as string);
+
+    const parsed = projectSchema.safeParse({
+      title,
+      slug,
+      description,
+      content,
+      thumbnail: (raw.thumbnail as string) || "",
+      demoUrl: (raw.demoUrl as string) || "",
+      githubUrl: (raw.githubUrl as string) || "",
+      techStack,
+      isFeatured: raw.isFeatured === "on" || raw.isFeatured === "true",
     });
-    throw new Error("Failed to update project");
-  }
 
-  if (!existing) throw new Error("Not found");
+    if (!parsed.success) {
+      logger.error("Project validation failed", {
+        action: "updateProject",
+        userId: session.user.id as string,
+        context: { id, errors: parsed.error.issues, raw: { title, slug } },
+      });
+      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    }
 
-  const slug = (raw.slug as string)?.trim() || existing.slug;
-
-  const techStack = safeParseJsonArray(raw.techStack as string);
-
-  const parsed = projectSchema.safeParse({
-    title: raw.title,
-    slug,
-    description: raw.description,
-    content: raw.content,
-    thumbnail: raw.thumbnail || "",
-    demoUrl: raw.demoUrl || "",
-    githubUrl: raw.githubUrl || "",
-    techStack,
-    isFeatured: raw.isFeatured === "on" || raw.isFeatured === "true",
-  });
-
-  if (!parsed.success) {
-    logger.error("Project validation failed", {
-      action: "updateProject",
-      userId: session.user.id as string,
-      context: { id, errors: parsed.error.issues, raw: { title: raw.title, slug } },
-    });
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
-  }
-
-  try {
     await prisma.project.update({
       where: { id },
       data: { ...parsed.data, techStack: JSON.stringify(parsed.data.techStack) },
     });
-  } catch (error) {
-    logger.error("Failed to update project", {
-      action: "updateProject",
-      userId: session.user.id as string,
-      context: { id, title: parsed.data.title },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to update project");
-  }
 
-  revalidatePath("/admin/projects");
-  revalidatePath("/projects");
-  redirect("/admin/projects");
+    revalidatePath("/admin/projects");
+    revalidatePath("/projects");
+    redirect("/admin/projects");
+  } catch (error) {
+    logAndRethrow("updateProject", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function deleteProject(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
-    await prisma.project.delete({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to delete project", {
-      action: "deleteProject",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to delete project");
-  }
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
 
-  revalidatePath("/admin/projects");
-  revalidatePath("/projects");
+    try {
+      await prisma.project.delete({ where: { id } });
+    } catch {
+      throw new Error("Failed to delete project");
+    }
+
+    revalidatePath("/admin/projects");
+    revalidatePath("/projects");
+  } catch (error) {
+    logAndRethrow("deleteProject", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function toggleProjectFeatured(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  let project;
   try {
-    project = await prisma.project.findUnique({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to find project for toggle", {
-      action: "toggleProjectFeatured",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to toggle project featured status");
-  }
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
 
-  if (!project) throw new Error("Not found");
+    const project = await prisma.project.findUnique({ where: { id } });
+    if (!project) throw new Error("Not found");
 
-  try {
     await prisma.project.update({
       where: { id },
       data: { isFeatured: !project.isFeatured },
     });
-  } catch (error) {
-    logger.error("Failed to toggle project featured", {
-      action: "toggleProjectFeatured",
-      userId: session.user.id as string,
-      context: { id, isFeatured: !project.isFeatured },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to toggle project featured status");
-  }
 
-  revalidatePath("/admin/projects");
-  revalidatePath("/projects");
+    revalidatePath("/admin/projects");
+    revalidatePath("/projects");
+  } catch (error) {
+    logAndRethrow("toggleProjectFeatured", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 function safeParseJsonArray(value: string): string[] {
@@ -243,4 +208,23 @@ function safeParseJsonArray(value: string): string[] {
   } catch {
     return value.split(",").map((s) => s.trim()).filter(Boolean);
   }
+}
+
+function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
+  if (isRedirectError) throw error;
+
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  logger.error(message, {
+    action,
+    userId: extra?.userId as string | undefined,
+    context: extra?.context,
+    stack,
+  });
+
+  throw typeof error === "object" && error !== null && "message" in error
+    ? error
+    : new Error("An unexpected error occurred");
 }

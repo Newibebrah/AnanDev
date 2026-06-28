@@ -80,36 +80,37 @@ export async function getPostById(id: string) {
 }
 
 export async function createPost(formData: FormData) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  const raw = Object.fromEntries(formData);
-  const published = raw.status === "PUBLISHED" || raw.status === "on";
-
-  const slug = (raw.slug as string)?.trim() || slugify(raw.title as string);
-
-  const parsed = postSchema.safeParse({
-    title: raw.title,
-    slug,
-    excerpt: raw.excerpt || undefined,
-    content: raw.content,
-    coverImage: raw.coverImage || "",
-    status: published ? "PUBLISHED" : "DRAFT",
-    publishedAt: published ? new Date().toISOString() : undefined,
-  });
-
-  if (!parsed.success) {
-    logger.error("Post validation failed", {
-      action: "createPost",
-      userId: session.user.id as string,
-      context: { errors: parsed.error.issues, raw: { title: raw.title, slug } },
-    });
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
-  }
-
-  const authorId = session.user.id as string;
-
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const raw = Object.fromEntries(formData);
+    const published = raw.status === "PUBLISHED" || raw.status === "on";
+
+    const title = (raw.title as string) || "";
+    const slug = (raw.slug as string)?.trim() || slugify(title);
+
+    const parsed = postSchema.safeParse({
+      title,
+      slug,
+      excerpt: (raw.excerpt as string) || undefined,
+      content: (raw.content as string) || "",
+      coverImage: (raw.coverImage as string) || "",
+      status: published ? "PUBLISHED" : "DRAFT",
+      publishedAt: published ? new Date().toISOString() : undefined,
+    });
+
+    if (!parsed.success) {
+      logger.error("Post validation failed", {
+        action: "createPost",
+        userId: session.user.id as string,
+        context: { errors: parsed.error.issues, raw: { title, slug } },
+      });
+      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    }
+
+    const authorId = session.user.id as string;
+
     await prisma.post.create({
       data: {
         ...parsed.data,
@@ -117,68 +118,51 @@ export async function createPost(formData: FormData) {
         authorId,
       },
     });
-  } catch (error) {
-    logger.error("Failed to create post", {
-      action: "createPost",
-      userId: authorId,
-      context: { title: parsed.data.title, slug: parsed.data.slug },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to create post");
-  }
 
-  revalidatePath("/admin/blog");
-  revalidatePath("/blog");
-  redirect("/admin/blog");
+    revalidatePath("/admin/blog");
+    revalidatePath("/blog");
+    redirect("/admin/blog");
+  } catch (error) {
+    logAndRethrow("createPost", error, { userId: (await auth())?.user?.id });
+  }
 }
 
 export async function updatePost(id: string, formData: FormData) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  const raw = Object.fromEntries(formData);
-  const published = raw.status === "PUBLISHED" || raw.status === "on";
-
-  let existing;
   try {
-    existing = await prisma.post.findUnique({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to find post for update", {
-      action: "updatePost",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    const raw = Object.fromEntries(formData);
+    const published = raw.status === "PUBLISHED" || raw.status === "on";
+
+    const existing = await prisma.post.findUnique({ where: { id } });
+    if (!existing) throw new Error("Not found");
+
+    const title = (raw.title as string) || "";
+    const slug = (raw.slug as string)?.trim() || existing.slug;
+
+    const parsed = postSchema.safeParse({
+      title,
+      slug,
+      excerpt: (raw.excerpt as string) || undefined,
+      content: (raw.content as string) || "",
+      coverImage: (raw.coverImage as string) || "",
+      status: published ? "PUBLISHED" : "DRAFT",
+      publishedAt:
+        published && !existing.publishedAt
+          ? new Date().toISOString()
+          : existing.publishedAt?.toISOString() || undefined,
     });
-    throw new Error("Failed to update post");
-  }
 
-  if (!existing) throw new Error("Not found");
+    if (!parsed.success) {
+      logger.error("Post validation failed", {
+        action: "updatePost",
+        userId: session.user.id as string,
+        context: { id, errors: parsed.error.issues, raw: { title, slug } },
+      });
+      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    }
 
-  const slug = (raw.slug as string)?.trim() || existing.slug;
-
-  const parsed = postSchema.safeParse({
-    title: raw.title,
-    slug,
-    excerpt: raw.excerpt || undefined,
-    content: raw.content,
-    coverImage: raw.coverImage || "",
-    status: published ? "PUBLISHED" : "DRAFT",
-    publishedAt:
-      published && !existing.publishedAt
-        ? new Date().toISOString()
-        : existing.publishedAt?.toISOString() || undefined,
-  });
-
-  if (!parsed.success) {
-    logger.error("Post validation failed", {
-      action: "updatePost",
-      userId: session.user.id as string,
-      context: { id, errors: parsed.error.issues, raw: { title: raw.title, slug } },
-    });
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
-  }
-
-  try {
     await prisma.post.update({
       where: { id },
       data: {
@@ -186,63 +170,39 @@ export async function updatePost(id: string, formData: FormData) {
         publishedAt: parsed.data.publishedAt ? new Date(parsed.data.publishedAt) : null,
       },
     });
-  } catch (error) {
-    logger.error("Failed to update post", {
-      action: "updatePost",
-      userId: session.user.id as string,
-      context: { id, title: parsed.data.title },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to update post");
-  }
 
-  revalidatePath("/admin/blog");
-  revalidatePath("/blog");
-  redirect("/admin/blog");
+    revalidatePath("/admin/blog");
+    revalidatePath("/blog");
+    redirect("/admin/blog");
+  } catch (error) {
+    logAndRethrow("updatePost", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function deletePost(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
-    await prisma.post.delete({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to delete post", {
-      action: "deletePost",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to delete post");
-  }
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
 
-  revalidatePath("/admin/blog");
-  revalidatePath("/blog");
+    await prisma.post.delete({ where: { id } });
+
+    revalidatePath("/admin/blog");
+    revalidatePath("/blog");
+  } catch (error) {
+    logAndRethrow("deletePost", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function togglePostStatus(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  let post;
   try {
-    post = await prisma.post.findUnique({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to find post for toggle", {
-      action: "togglePostStatus",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to toggle post status");
-  }
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
 
-  if (!post) throw new Error("Not found");
+    const post = await prisma.post.findUnique({ where: { id } });
+    if (!post) throw new Error("Not found");
 
-  const newStatus = post.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
+    const newStatus = post.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED";
 
-  try {
     await prisma.post.update({
       where: { id },
       data: {
@@ -250,16 +210,29 @@ export async function togglePostStatus(id: string) {
         publishedAt: newStatus === "PUBLISHED" ? new Date() : null,
       },
     });
-  } catch (error) {
-    logger.error("Failed to toggle post status", {
-      action: "togglePostStatus",
-      userId: session.user.id as string,
-      context: { id, newStatus },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to toggle post status");
-  }
 
-  revalidatePath("/admin/blog");
-  revalidatePath("/blog");
+    revalidatePath("/admin/blog");
+    revalidatePath("/blog");
+  } catch (error) {
+    logAndRethrow("togglePostStatus", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
+}
+
+function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
+  if (isRedirectError) throw error;
+
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  logger.error(message, {
+    action,
+    userId: extra?.userId as string | undefined,
+    context: extra?.context,
+    stack,
+  });
+
+  throw typeof error === "object" && error !== null && "message" in error
+    ? error
+    : new Error("An unexpected error occurred");
 }

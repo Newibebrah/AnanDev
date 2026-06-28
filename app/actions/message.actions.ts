@@ -19,64 +19,72 @@ export async function getMessages() {
 }
 
 export async function submitMessage(formData: FormData) {
-  const raw = Object.fromEntries(formData);
-  const parsed = messageSchema.parse({
-    name: raw.name,
-    email: raw.email,
-    content: raw.content,
-  });
-
   try {
-    await prisma.message.create({ data: parsed });
-  } catch (error) {
-    logger.error("Failed to submit message", {
-      action: "submitMessage",
-      context: { name: parsed.name, email: parsed.email },
-      stack: error instanceof Error ? error.stack : undefined,
+    const raw = Object.fromEntries(formData);
+    const parsed = messageSchema.safeParse({
+      name: raw.name,
+      email: raw.email,
+      content: raw.content,
     });
-    throw new Error("Failed to send message");
-  }
 
-  revalidatePath("/admin/messages");
+    if (!parsed.success) {
+      logger.error("Message validation failed", {
+        action: "submitMessage",
+        context: { errors: parsed.error.issues },
+      });
+      throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    }
+
+    await prisma.message.create({ data: parsed.data });
+
+    revalidatePath("/admin/messages");
+  } catch (error) {
+    logAndRethrow("submitMessage", error);
+  }
 }
 
 export async function markMessageRead(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
     await prisma.message.update({
       where: { id },
       data: { isRead: true },
     });
-  } catch (error) {
-    logger.error("Failed to mark message as read", {
-      action: "markMessageRead",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to mark message as read");
-  }
 
-  revalidatePath("/admin/messages");
+    revalidatePath("/admin/messages");
+  } catch (error) {
+    logAndRethrow("markMessageRead", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
 }
 
 export async function deleteMessage(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-
   try {
-    await prisma.message.delete({ where: { id } });
-  } catch (error) {
-    logger.error("Failed to delete message", {
-      action: "deleteMessage",
-      userId: session.user.id as string,
-      context: { id },
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    throw new Error("Failed to delete message");
-  }
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
 
-  revalidatePath("/admin/messages");
+    await prisma.message.delete({ where: { id } });
+
+    revalidatePath("/admin/messages");
+  } catch (error) {
+    logAndRethrow("deleteMessage", error, { userId: (await auth())?.user?.id, context: { id } });
+  }
+}
+
+function logAndRethrow(action: string, error: unknown, extra?: { userId?: unknown; context?: Record<string, unknown> }) {
+  const isRedirectError = error instanceof Error && error.message.includes("NEXT_REDIRECT");
+  if (isRedirectError) throw error;
+
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  logger.error(message, {
+    action,
+    userId: extra?.userId as string | undefined,
+    context: extra?.context,
+    stack,
+  });
+
+  throw typeof error === "object" && error !== null && "message" in error ? error : new Error("An unexpected error occurred");
 }
