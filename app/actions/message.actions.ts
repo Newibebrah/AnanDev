@@ -10,12 +10,16 @@ import type { ActionResult } from "@/app/lib/form-types";
 
 export async function getMessages() {
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
     return await prisma.message.findMany({ orderBy: { createdAt: "desc" } });
   } catch (error) {
     await logger.error("Failed to fetch messages", {
       action: "getMessages",
       stack: error instanceof Error ? error.stack : undefined,
     });
+    if (error instanceof Error && error.message === "Unauthorized") throw error;
     throw new Error("Failed to fetch messages");
   }
 }

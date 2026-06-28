@@ -11,6 +11,9 @@ import type { ActionResult } from "@/app/lib/form-types";
 
 export async function getPosts() {
   try {
+    const session = await auth();
+    if (!session?.user) throw new Error("Unauthorized");
+
     return await prisma.post.findMany({
       include: { author: { select: { username: true } } },
       orderBy: { createdAt: "desc" },
@@ -20,6 +23,7 @@ export async function getPosts() {
       action: "getPosts",
       stack: error instanceof Error ? error.stack : undefined,
     });
+    if (error instanceof Error && error.message === "Unauthorized") throw error;
     throw new Error("Failed to fetch posts");
   }
 }

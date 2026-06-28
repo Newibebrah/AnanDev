@@ -6,11 +6,12 @@ import { Label } from "@/app/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -28,7 +29,18 @@ export default function LoginPage() {
       toast.error("Invalid username or password");
       setLoading(false);
     } else {
-      router.push("/admin/dashboard");
+      let redirectTo = "/admin/dashboard";
+      const callbackUrl = searchParams.get("callbackUrl");
+      if (callbackUrl) {
+        try {
+          const parsed = new URL(callbackUrl, window.location.origin);
+          const allowed = ["/admin", "/admin/dashboard", "/admin/projects", "/admin/blog", "/admin/comments", "/admin/messages", "/admin/errors", "/admin/chat"];
+          if (allowed.some((p) => parsed.pathname.startsWith(p))) {
+            redirectTo = callbackUrl;
+          }
+        } catch {}
+      }
+      router.push(redirectTo);
       router.refresh();
     }
   }
@@ -43,7 +55,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
               <Label htmlFor="username">Username</Label>
-              <Input id="username" name="username" placeholder="admin" required />
+              <Input id="username" name="username" placeholder="admin" required autoComplete="off" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="password">Password</Label>
@@ -53,6 +65,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 required
+                autoComplete="off"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

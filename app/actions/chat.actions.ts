@@ -18,14 +18,18 @@ export type ChatMessageData = {
 
 const RATE_LIMIT_SECONDS = 2;
 
+const IP_SALT = process.env.IP_HASH_SALT || "default-rotate-in-prod";
+
 function hashIp(ip: string): string {
-  return createHash("sha256").update(ip + "chat-secret-salt").digest("hex").slice(0, 16);
+  return createHash("sha256").update(ip + IP_SALT).digest("hex").slice(0, 16);
 }
 
 async function getClientIp(): Promise<string> {
   const { headers } = await import("next/headers");
   const h = await headers();
-  return h.get("x-forwarded-for") || h.get("x-real-ip") || "unknown";
+  const forwarded = h.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return h.get("x-real-ip") || "unknown";
 }
 
 export async function getMessages(): Promise<ChatMessageData[]> {
