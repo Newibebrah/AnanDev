@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/lib/cn";
+import { AccentSwitcher } from "@/app/components/ui/accent-switcher";
 import { useEffect, useRef, useCallback, useState, useSyncExternalStore } from "react";
 
 const navLinks = [
@@ -66,9 +67,16 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full glass-nav">
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       <div className="container mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="font-bold text-lg md:text-xl text-gradient min-h-[44px] flex items-center">
-          Portfolio
+        <Link
+          href="/"
+          className="font-bold text-lg md:text-xl min-h-[44px] flex items-center gap-1.5 group"
+        >
+          <span className="text-gradient">&lt;AnanDev</span>
+          <span className="text-muted-foreground/50 font-mono text-xs md:text-sm transition-colors group-hover:text-muted-foreground/80">
+            /&gt;
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
@@ -95,10 +103,14 @@ export default function Navbar() {
             );
           })}
 
+          <span className="w-px h-6 bg-border mx-2" aria-hidden="true" />
+
+          <AccentSwitcher />
+
           <Button
             variant="ghost"
             size="icon"
-            className="ml-2 min-h-[44px] min-w-[44px]"
+            className="min-h-[44px] min-w-[44px]"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label="Toggle theme"
           >
@@ -154,7 +166,11 @@ export default function Navbar() {
                 </Button>
               );
             })}
-            <div className="pt-3 border-t border-border mt-2">
+            <div className="pt-4 border-t border-border mt-2 space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs text-muted-foreground font-medium">Accent</span>
+                <AccentSwitcher />
+              </div>
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-3 min-h-[48px] text-base"

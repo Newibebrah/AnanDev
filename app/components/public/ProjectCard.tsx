@@ -7,8 +7,8 @@ export default function ProjectCard({ project }: { project: Project }) {
   const techStack: string[] = JSON.parse(project.techStack || "[]");
 
   return (
-    <Link href={`/projects/${project.slug}`} className="group block">
-      <article className="h-full rounded-xl border border-border/50 bg-card overflow-hidden transition-all duration-300 card-glow hover:border-primary/30 hover:-translate-y-1">
+    <Link href={`/projects/${project.slug}`} className="group block h-full">
+      <article className="h-full rounded-xl border border-border/50 bg-card overflow-hidden transition-all duration-300 card-glow hover:border-primary/30 hover:-translate-y-1.5 flex flex-col">
         {project.thumbnail && (
           <div className="aspect-video w-full overflow-hidden relative">
             <Image
@@ -18,13 +18,14 @@ export default function ProjectCard({ project }: { project: Project }) {
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-card/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
         )}
-        <div className="p-5">
+        <div className="p-5 flex flex-col flex-1">
           <h3 className="font-semibold text-lg line-clamp-2 mb-2 group-hover:text-primary transition-colors">
             {project.title}
           </h3>
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
+          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 leading-relaxed flex-1">
             {project.description}
           </p>
           {techStack.length > 0 && (

@@ -26,8 +26,11 @@ export default async function HomePage() {
         <section className="container mx-auto max-w-5xl px-4 py-16">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold">Featured Projects</h2>
-              <p className="text-muted-foreground mt-1">Some of my recent work</p>
+              <h2 className="text-2xl md:text-3xl font-bold">
+                Featured Projects
+                <span className="block mt-1.5 w-12 h-1 rounded-full bg-gradient-to-r from-primary to-transparent" />
+              </h2>
+              <p className="text-muted-foreground mt-3">Some of my recent work</p>
             </div>
             <Button variant="ghost" asChild className="hidden sm:inline-flex">
               <Link href="/projects">View all &rarr;</Link>
@@ -52,8 +55,11 @@ export default async function HomePage() {
         <section className="container mx-auto max-w-5xl px-4 py-16">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold">Latest Posts</h2>
-              <p className="text-muted-foreground mt-1">Thoughts and tutorials</p>
+              <h2 className="text-2xl md:text-3xl font-bold">
+                Latest Posts
+                <span className="block mt-1.5 w-12 h-1 rounded-full bg-gradient-to-r from-primary to-transparent" />
+              </h2>
+              <p className="text-muted-foreground mt-3">Thoughts and tutorials</p>
             </div>
             <Button variant="ghost" asChild className="hidden sm:inline-flex">
               <Link href="/blog">View all &rarr;</Link>

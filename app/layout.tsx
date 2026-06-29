@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const accentScript = `
+(function(){try{var a=localStorage.getItem("accent");if(a)document.documentElement.setAttribute("data-accent",a)}catch(e){}})()
+`;
+
 export const metadata: Metadata = {
   title: { default: "Portfolio", template: "%s | Portfolio" },
   description: "My personal portfolio website",
@@ -47,6 +51,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: accentScript }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <SkipLink />
         <Providers>
