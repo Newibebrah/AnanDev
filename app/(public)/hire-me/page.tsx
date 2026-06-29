@@ -45,16 +45,16 @@ export default function HireMePage() {
             <div>
               <p className="text-sm font-medium">Email</p>
               <a
-                href="mailto:hello@example.com"
+                href="mailto:lionasananta@gmail.com"
                 className="text-sm text-muted-foreground hover:text-foreground"
               >
-                hello@example.com
+                lionasananta@gmail.com
               </a>
             </div>
             <div>
               <p className="text-sm font-medium">Instagram</p>
               <a
-                href="https://instagram.com/yourhandle"
+                href="https://instagram.com/anandcaprio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-muted-foreground hover:text-foreground"

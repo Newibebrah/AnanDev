@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Button } from "@/app/components/ui/button";
 import { cn } from "@/app/lib/cn";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useSyncExternalStore } from "react";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,14 +18,51 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => setMounted(true), []);
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setMobileOpen(false);
+      toggleRef.current?.focus();
+      return;
+    }
+    if (e.key === "Tab" && menuRef.current) {
+      const focusable = menuRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full glass-nav">
@@ -34,7 +71,7 @@ export default function Navbar() {
           Portfolio
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -48,7 +85,7 @@ export default function Navbar() {
                   isActive && "text-primary"
                 )}
               >
-                <Link href={link.href}>
+                <Link href={link.href} aria-current={isActive ? "page" : undefined}>
                   {link.label}
                   {isActive && (
                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-primary" />
@@ -74,9 +111,12 @@ export default function Navbar() {
         </nav>
 
         <button
+          ref={toggleRef}
           className="md:hidden flex items-center justify-center min-w-[44px] min-h-[44px] touch-manipulation"
           onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-menu"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             {mobileOpen ? (
@@ -89,7 +129,14 @@ export default function Navbar() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl animate-fade-in">
+        <div
+          ref={menuRef}
+          id="mobile-menu"
+          className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl animate-fade-in"
+          role="region"
+          aria-label="Mobile navigation"
+          onKeyDown={handleKeyDown}
+        >
           <nav className="container mx-auto max-w-5xl px-4 py-4 flex flex-col gap-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -103,7 +150,7 @@ export default function Navbar() {
                     isActive && "bg-accent text-accent-foreground"
                   )}
                 >
-                  <Link href={link.href}>{link.label}</Link>
+                  <Link href={link.href} onClick={closeMobile} aria-current={isActive ? "page" : undefined}>{link.label}</Link>
                 </Button>
               );
             })}

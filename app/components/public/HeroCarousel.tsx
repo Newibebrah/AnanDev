@@ -116,26 +116,44 @@ export default function HeroCarousel() {
     }
   }, [next, prev]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      prev();
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      next();
+    }
+  }, [next, prev]);
+
   return (
     <section
       className="relative overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onKeyDown={handleKeyDown}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Featured content carousel"
     >
       <div className="glow-dot -top-40 -left-40 w-96 h-96 bg-primary" />
       <div className="glow-dot -bottom-40 -right-40 w-80 h-80 bg-blue-500" />
 
       <div className="hero-grid-bg">
         <div className="container mx-auto max-w-5xl px-4 py-16 md:py-32 text-center relative">
-          {slides.map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                "transition-all duration-500",
-                i === current ? "block animate-fade-up" : "hidden"
-              )}
-            >
+          <div aria-live="polite" aria-atomic="false">
+            {slides.map((_, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "transition-all duration-500",
+                  i === current ? "block animate-fade-up" : "hidden"
+                )}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`Slide ${i + 1} of ${slides.length}`}
+              >
               {i === current && (
                 <>
                   <span className="inline-block text-[10px] md:text-xs font-medium tracking-widest uppercase text-primary mb-4 md:mb-6 px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 border border-primary/20">
@@ -157,6 +175,7 @@ export default function HeroCarousel() {
               )}
             </div>
           ))}
+          </div>
 
           <div className="flex items-center justify-center gap-3 md:gap-4 mt-10 md:mt-12">
             <button

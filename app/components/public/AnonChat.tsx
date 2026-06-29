@@ -29,7 +29,7 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
     });
   }, []);
 
-  const [state, formAction, pending] = useActionState(
+  const [_, formAction, pending] = useActionState(
     async (_prev: unknown, formData: FormData) => {
       const result = await sendMessage(formData);
       if (result.success) {
@@ -67,6 +67,9 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
         ref={containerRef}
         onScroll={checkNearBottom}
         className="overflow-y-auto mb-4 min-h-[30rem] max-h-[70vh]"
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
       >
         <CardContent className="p-4 space-y-3">
           {messages.length === 0 && (
@@ -110,6 +113,7 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
           className="flex-1 min-h-[44px] max-h-20"
           rows={1}
           maxLength={500}
+          aria-label="Pesan chat"
         />
         <Button type="submit" disabled={pending} className="min-h-[44px] shrink-0">
           {pending ? "..." : "Kirim"}
