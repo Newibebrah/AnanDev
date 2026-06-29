@@ -8,6 +8,7 @@ import { Textarea } from "@/app/components/ui/textarea";
 import { Label } from "@/app/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { CancelButton } from "@/app/components/ui/cancel-button";
+import { MarkdownToolbar } from "@/app/components/admin/markdown-toolbar";
 import { createProject, updateProject } from "@/app/actions/project.actions";
 import { validateProject } from "@/app/lib/client-validate";
 import type { Project } from "@prisma/client";
@@ -87,9 +88,10 @@ export function ProjectForm({ project }: ProjectFormProps) {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="content">Content (Markdown)</Label>
+              <Label htmlFor="project-content">Content (Markdown)</Label>
+              <MarkdownToolbar textareaId="project-content" />
               <Textarea
-                id="content"
+                id="project-content"
                 name="content"
                 defaultValue={project?.content}
                 placeholder="Full project details in Markdown..."

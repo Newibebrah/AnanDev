@@ -8,6 +8,7 @@ import { Textarea } from "@/app/components/ui/textarea";
 import { Label } from "@/app/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { CancelButton } from "@/app/components/ui/cancel-button";
+import { MarkdownToolbar } from "@/app/components/admin/markdown-toolbar";
 import { createPost, updatePost } from "@/app/actions/post.actions";
 import { validatePost } from "@/app/lib/client-validate";
 import type { Post } from "@prisma/client";
@@ -96,9 +97,10 @@ export function PostForm({ post }: PostFormProps) {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="content">Content (Markdown)</Label>
+              <Label htmlFor="post-content">Content (Markdown)</Label>
+              <MarkdownToolbar textareaId="post-content" />
               <Textarea
-                id="content"
+                id="post-content"
                 name="content"
                 defaultValue={post?.content}
                 placeholder="Write your post in Markdown..."
