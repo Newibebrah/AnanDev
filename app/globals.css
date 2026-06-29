@@ -267,19 +267,57 @@
   animation: scale-in 0.4s ease-out;
 }
 
+@utility animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 20px color-mix(in srgb, var(--primary) 30%, transparent),
+      0 0 40px color-mix(in srgb, var(--primary) 15%, transparent);
+  }
+  50% {
+    text-shadow:
+      0 0 30px color-mix(in srgb, var(--primary) 50%, transparent),
+      0 0 60px color-mix(in srgb, var(--primary) 25%, transparent),
+      0 0 100px color-mix(in srgb, var(--primary) 12%, transparent);
+  }
+}
+
 @utility glass {
   @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-800/50;
 }
 
 @utility glass-nav {
   @apply bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50;
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  .glass-nav {
+    border-image: linear-gradient(in oklch, color-mix(in srgb, var(--primary) 15%, transparent), transparent 50%) 1;
+  }
 }
 
 @utility card-glow {
   @apply transition-all duration-300;
   &:hover {
-    box-shadow: 0 0 25px color-mix(in srgb, var(--primary) 20%, transparent);
+    box-shadow:
+      0 0 25px color-mix(in srgb, var(--primary) 20%, transparent),
+      0 0 60px color-mix(in srgb, var(--primary) 8%, transparent);
   }
+}
+
+@utility text-glow {
+  text-shadow: 0 0 20px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+@utility text-glow-strong {
+  text-shadow:
+    0 0 20px color-mix(in srgb, var(--primary) 40%, transparent),
+    0 0 40px color-mix(in srgb, var(--primary) 20%, transparent),
+    0 0 80px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 @utility text-gradient {
@@ -299,7 +337,21 @@
 }
 
 @utility glow-dot {
-  @apply absolute rounded-full blur-3xl opacity-20 dark:opacity-10;
+  @apply absolute rounded-full blur-3xl;
+  opacity: 0.25;
+}
+
+.dark .glow-dot {
+  opacity: 0.15;
+}
+
+@utility glow-dot-strong {
+  @apply absolute rounded-full blur-2xl;
+  opacity: 0.35;
+}
+
+.dark .glow-dot-strong {
+  opacity: 0.2;
 }
 
 @keyframes pulse-slow {

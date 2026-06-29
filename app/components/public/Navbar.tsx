@@ -73,8 +73,8 @@ export default function Navbar() {
           href="/"
           className="font-bold text-lg md:text-xl min-h-[44px] flex items-center gap-1.5 group"
         >
-          <span className="text-gradient">&lt;AnanDev</span>
-          <span className="text-muted-foreground/50 font-mono text-xs md:text-sm transition-colors group-hover:text-muted-foreground/80">
+          <span className="text-gradient text-glow animate-glow-pulse">&lt;AnanDev</span>
+          <span className="text-muted-foreground/40 font-mono text-xs md:text-sm transition-all duration-300 group-hover:text-primary/60 group-hover:text-glow">
             /&gt;
           </span>
         </Link>

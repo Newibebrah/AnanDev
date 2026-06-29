@@ -137,8 +137,9 @@ export default function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label="Featured content carousel"
     >
-      <div className="glow-dot -top-40 -left-40 w-96 h-96 bg-primary" />
-      <div className="glow-dot -bottom-40 -right-40 w-80 h-80" style={{ backgroundColor: "color-mix(in srgb, var(--primary) 70%, transparent)" }} />
+      <div className="glow-dot-strong -top-40 -left-40 w-96 h-96" style={{ backgroundColor: "color-mix(in srgb, var(--primary) 60%, transparent)" }} />
+      <div className="glow-dot-strong -bottom-40 -right-40 w-80 h-80" style={{ backgroundColor: "color-mix(in srgb, var(--ring) 50%, transparent)" }} />
+      <div className="glow-dot -top-20 left-1/2 -translate-x-1/2 w-64 h-64" style={{ backgroundColor: "color-mix(in srgb, var(--primary) 30%, transparent)" }} />
 
       <div className="hero-grid-bg">
         <div className="container mx-auto max-w-5xl px-4 py-16 md:py-32 text-center relative">
@@ -156,10 +157,10 @@ export default function HeroCarousel() {
               >
               {i === current && (
                 <>
-                  <span className="inline-block text-[10px] md:text-xs font-medium tracking-widest uppercase mb-4 md:mb-6 px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <span className="inline-block text-[10px] md:text-xs font-medium tracking-widest uppercase mb-4 md:mb-6 px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 shadow-[0_0_15px] shadow-primary/10">
                     {slide.badge}
                   </span>
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 md:mb-6 leading-tight">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 md:mb-6 leading-tight text-glow">
                     {slide.heading}
                   </h1>
                   {slide.description && (
