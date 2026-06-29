@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useActionState, useCallback } from "react"
 import { Button } from "@/app/components/ui/button";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Card, CardContent } from "@/app/components/ui/card";
+import { filterProfanity, containsProfanity } from "@/app/lib/profanity-filter";
 import { sendMessage, getMessages } from "@/app/actions/chat.actions";
 import { toast } from "sonner";
 import type { ChatMessageData } from "@/app/actions/chat.actions";
@@ -100,6 +101,11 @@ export default function AnonChat({ initial }: { initial: ChatMessageData[] }) {
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData(e.currentTarget);
+          const content = fd.get("content") as string;
+          if (containsProfanity(content)) {
+            toast.error("Pesan mengandung kata kasar, harap gunakan bahasa yang sopan");
+            return;
+          }
           formAction(fd);
           e.currentTarget.reset();
         }}

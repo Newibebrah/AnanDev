@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/app/lib/prisma";
 import { chatMessageSchema } from "@/app/lib/validations";
+import { filterProfanity, containsProfanity } from "@/app/lib/profanity-filter";
 import { auth } from "@/app/lib/auth";
 import { logger } from "@/app/lib/logger";
 import { createHash } from "crypto";
@@ -60,6 +61,14 @@ export async function sendMessage(formData: FormData): Promise<ActionResult> {
         success: false,
         errors: null,
         message: "Pesan tidak valid (maks 500 karakter)",
+      };
+    }
+
+    if (containsProfanity(parsed.data.content)) {
+      return {
+        success: false,
+        errors: null,
+        message: "Pesan mengandung kata kasar, harap gunakan bahasa yang sopan",
       };
     }
 
